@@ -1,15 +1,16 @@
-from typing import Annotated
+"""Общие типы-алиасы домена (контракт edge, фаза 7а)."""
+
+from typing import Annotated, Literal
 
 import pydantic
 
 from src.domain.constants import BEAM_COUNT
-
-from .beam import Beam
-from .event_payload import (
+from src.domain.value_objects.beam import Beam
+from src.domain.value_objects.event_payload import (
+    FatalError,
     PacketQuarantined,
     RadarDown,
     RadarRecovered,
-    WorkerFatal,
     WorkerRestarted,
 )
 
@@ -22,5 +23,13 @@ Measurement = Annotated[float, pydantic.Field(ge=0, allow_inf_nan=False)]
 type Timestamp = pydantic.AwareDatetime
 
 type EdgeEventPayload = (
-    RadarDown | RadarRecovered | PacketQuarantined | WorkerRestarted | WorkerFatal
+    RadarDown | RadarRecovered | PacketQuarantined | WorkerRestarted | FatalError
 )
+
+type EventType = Literal[
+    "radar_down",
+    "radar_recovered",
+    "packet_quarantined",
+    "worker_restarted",
+    "fatal_error",
+]

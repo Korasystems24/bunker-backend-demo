@@ -1,0 +1,8 @@
+{
+  "node_id": "edge-01",
+  "bunker_id": "bunker-1",
+  "cpu": 37.5,
+  "ram": 62.0,
+  "disk": 71.25,
+  "edge_time": "2026-08-25T10:00:05Z"
+}

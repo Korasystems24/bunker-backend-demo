@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from src import __version__
 from src.api.ops import router as ops_router
+from src.api.v1.ingest import router as ingest_router
 from src.bootstrap import Container, build_container
 from src.config.settings import Settings, get_settings
 from src.logging_config import setup_logging
@@ -34,6 +35,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.container = container
     app.include_router(ops_router)
+    # X-API-Key проверяется на уровне роутера (см. api/deps.require_edge_api_key).
+    app.include_router(ingest_router)
     return app
 
 

@@ -61,7 +61,7 @@ docker compose exec db psql -U bunker -d bunker \
 ## Статус (план работ)
 
 - [x] Шаг 1 / День 1 — каркас и хранилище (compose, Alembic, healthz)
-- [ ] Шаг 2 / День 2 — Ingestion API (`/telemetry`, `/events`, `/health`), дедуп, X-API-Key, контрактные тесты
+- [x] Шаг 2 / День 2 — Ingestion API (`/telemetry`, `/events`, `/health`), дедуп, X-API-Key, контрактные тесты
 - [ ] Шаг 3 / День 3 — Query API для фронта, seed_demo, CORS/gzip
 - [ ] Шаг 4 / День 4 — buildup v1, SilenceMonitor, continuous aggregates
 - [ ] Шаг 5 / День 5 — полировка, нагрузочный прогон, репетиция демо
