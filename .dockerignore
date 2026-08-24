@@ -1,0 +1,24 @@
+# Контекст сборки должен содержать только то, что нужно в образе.
+# Локальный .venv хоста НЕЛЬЗЯ копировать в контейнер (сломанные симлинки).
+
+.venv
+.git
+.gitignore
+.env
+.ruff_cache
+.pytest_cache
+.basedpyright
+.coverage
+htmlcov
+
+**/__pycache__
+**/*.py[cod]
+
+# В образе не нужны:
+docs
+tests
+scripts
+.idea
+.vscode
+Dockerfile
+docker-compose.yml

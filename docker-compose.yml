@@ -1,0 +1,39 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bunker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bunker}
+      POSTGRES_DB: ${POSTGRES_DB:-bunker}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Расширение timescaledb создаётся при первой инициализации тома.
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-bunker} -d ${POSTGRES_DB:-bunker}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BUNKER_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-bunker}:${POSTGRES_PASSWORD:-bunker}@db:5432/${POSTGRES_DB:-bunker}
+      BUNKER_API__EDGE_API_KEY: ${BUNKER_API__EDGE_API_KEY:-change-me-edge-token}
+      BUNKER_LOGGING__JSON: "true"
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+volumes:
+  pgdata:

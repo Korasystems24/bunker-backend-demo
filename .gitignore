@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Виртуальные окружения
+.venv/
+
+# Инструменты
+.ruff_cache/
+.pytest_cache/
+.basedpyright/
+.coverage
+.coverage.*
+htmlcov/
+
+# Секреты и локальная документация (в git — только .env.example)
+.env
+docs/
+
+# Локальные оверрайды compose
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
