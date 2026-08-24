@@ -1,0 +1,463 @@
+{
+  "bunker_id": "bunker-1",
+  "node_id": "edge-01",
+  "packets": [
+    {
+      "event_id": "c2a9e6d4-7777-4aaa-bbbb-123456789abc",
+      "ts": "2026-08-25T10:05:00Z",
+      "avg_level": null,
+      "mass": null,
+      "volume": null,
+      "beams": [
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        },
+        {
+          "height": null,
+          "raw_status": null,
+          "status": [
+            "NotUsed"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -17,9 +17,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "asgi-lifespan>=2.1.0",
     "basedpyright>=1.29.0",
     "httpx>=0.28.1",
     "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
     "ruff>=0.16.4",
 ]
 
@@ -53,13 +55,22 @@ select = [
 # «двусмысленных» кириллических букв, похожих на латиницу.
 ignore = ["RUF002", "RUF003"]
 
+[tool.ruff.lint.flake8-type-checking]
+# Аннотации pydantic-моделей и dataclass'ов вычисляются в рантайме.
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic_settings.BaseSettings",
+    "sqlalchemy.orm.DeclarativeBase",
+]
+runtime-evaluated-decorators = ["dataclasses.dataclass"]
+
 [tool.basedpyright]
-include = ["src"]
-# TODO(шаг 2 / день 2): убрать ignore после переноса контракта edge в src/domain
-# (сейчас там недописанные файлы: constants.py, beam.py, event_payload.py).
-ignore = ["src/domain"]
+include = ["src", "tests"]
 typeCheckingMode = "strict"
 pythonVersion = "3.12"
 venvPath = "."
 venv = ".venv"
 reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
