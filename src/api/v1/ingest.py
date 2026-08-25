@@ -1,12 +1,12 @@
 """POST-ручки приёма данных от edge: /telemetry, /events, /health.
 
 Семантика ответов по контракту: 200 — успех (включая полный дубль),
-401/403 — токен, 422 — ошибка валидации (batch отклоняется целиком).
+401/403 — Bearer-токен, 422 — ошибка валидации (batch отклоняется целиком).
 """
 
 import fastapi
 
-from src.api.deps import ContainerDep, require_edge_api_key
+from src.api.deps import ContainerDep, require_edge_token
 from src.api.schemas.ingest import (
     EventsRequest,
     HealthAccepted,
@@ -18,7 +18,7 @@ from src.api.schemas.ingest import (
 router = fastapi.APIRouter(
     prefix="/api/v1",
     tags=["ingest"],
-    dependencies=[fastapi.Depends(require_edge_api_key)],
+    dependencies=[fastapi.Depends(require_edge_token)],
 )
 
 
@@ -44,5 +44,5 @@ async def post_events(payload: EventsRequest, container: ContainerDep) -> Ingest
 
 @router.post("/health")
 async def post_health(payload: HealthRequest, container: ContainerDep) -> HealthAccepted:
-    await container.ingestion.ingest_health(payload)
+    await container.ingestion.ingest_health(payload.bunker_id, payload)
     return HealthAccepted()

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from src.domain.entities.edge_event import EdgeEvent
 from src.domain.ports.event_repository import EventRepository
 from src.domain.value_objects.save_stats import SaveStats
+from src.infrastructure.database.repositories.nodes import touch_node
 
 
 class SqlEventRepository(EventRepository):
@@ -34,11 +35,13 @@ class SqlEventRepository(EventRepository):
                         "event_id": str(event.event_id),
                         "ts": event.ts,
                         "type": event.type,
-                        "payload": json.dumps(event.payload),
+                        "payload": json.dumps(event.payload.model_dump(mode="json")),
                     },
                 )
                 if result.scalar() is not None:
                     inserted += 1
+            # Касание событий продлевает жизнь узлу (dead-man, блок F плана).
+            await touch_node(session, bunker_id)
 
         return SaveStats(
             received=len(events),

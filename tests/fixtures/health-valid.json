@@ -1,8 +1,25 @@
 {
-  "node_id": "edge-01",
   "bunker_id": "bunker-1",
-  "cpu": 37.5,
-  "ram": 62.0,
-  "disk": 71.25,
-  "edge_time": "2026-08-25T10:00:05Z"
+  "ts": "2026-08-25T10:00:05Z",
+  "workers": {
+    "dispatch": {
+      "alive": true,
+      "last_error": null,
+      "last_error_at": null,
+      "fatal": null
+    },
+    "ingestion": {
+      "alive": true,
+      "last_error": "serial timeout",
+      "last_error_at": "2026-08-25T09:58:41Z",
+      "fatal": null
+    }
+  },
+  "pending_count": 3,
+  "quarantined_count": 0,
+  "free_bytes": 21474836480,
+  "storage_paused": false,
+  "cpu_percent": 37.5,
+  "memory_percent": 62.0,
+  "disk_percent": 71.25
 }

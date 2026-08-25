@@ -9,19 +9,23 @@ from src.domain.entities.telemetry_packet import TelemetryPacket
 
 class TelemetryRequest(pydantic.BaseModel):
     bunker_id: str
-    node_id: str | None = None
     packets: list[TelemetryPacket] = pydantic.Field(min_length=1)
 
 
 # Список событий переиспользует доменную EdgeEvent как есть.
 class EventsRequest(pydantic.BaseModel):
     bunker_id: str
-    node_id: str | None = None
     events: list[EdgeEvent] = pydantic.Field(min_length=1)
 
 
 class HealthRequest(HealthSnapshot):
-    """Тело POST /health совпадает со снимком узла."""
+    """Тело POST /health: снимок узла + bunker_id рядом с ним.
+
+    EdgePC не шлёт node_id — идентичность узла выводится из bunker_id
+    ('edge-<суффикс>', см. infrastructure.database.repositories.nodes).
+    """
+
+    bunker_id: str
 
 
 class IngestAccepted(pydantic.BaseModel):

@@ -7,10 +7,10 @@ import pydantic
 from src.domain.constants import BEAM_COUNT
 from src.domain.value_objects.beam import Beam
 from src.domain.value_objects.event_payload import (
-    FatalError,
     PacketQuarantined,
     RadarDown,
     RadarRecovered,
+    WorkerFatal,
     WorkerRestarted,
 )
 
@@ -23,7 +23,7 @@ Measurement = Annotated[float, pydantic.Field(ge=0, allow_inf_nan=False)]
 type Timestamp = pydantic.AwareDatetime
 
 type EdgeEventPayload = (
-    RadarDown | RadarRecovered | PacketQuarantined | WorkerRestarted | FatalError
+    RadarDown | RadarRecovered | PacketQuarantined | WorkerRestarted | WorkerFatal
 )
 
 type EventType = Literal[

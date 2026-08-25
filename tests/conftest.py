@@ -55,7 +55,21 @@ async def clean_database(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-def auth_headers(app: FastAPI) -> dict[str, str]:
-    """Заголовок с дефолтным ключом из настроек (тесты не меняют .env)."""
+@pytest_asyncio.fixture
+async def clean_query_database(app: FastAPI) -> AsyncIterator[None]:
+    """Полная очистка включая справочник бункеров (query-тесты сеют сами)."""
     container: Container = app.state.container
-    return {"X-API-Key": container.settings.api.edge_api_key}
+    async with container.engine.begin() as conn:
+        await conn.execute(
+            text(
+                "TRUNCATE measurements, beam_readings, buildup_zones, edge_events, "
+                "edge_nodes, alerts, geometries, bunkers CASCADE"
+            )
+        )
+    yield
+
+
+def auth_headers(app: FastAPI) -> dict[str, str]:
+    """Bearer-заголовок с дефолтным токеном из настроек (тесты не меняют .env)."""
+    container: Container = app.state.container
+    return {"Authorization": f"Bearer {container.settings.api.edge_auth_token}"}

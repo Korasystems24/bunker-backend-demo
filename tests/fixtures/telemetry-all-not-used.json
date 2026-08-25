@@ -1,6 +1,5 @@
 {
   "bunker_id": "bunker-1",
-  "node_id": "edge-01",
   "packets": [
     {
       "event_id": "c2a9e6d4-7777-4aaa-bbbb-123456789abc",
