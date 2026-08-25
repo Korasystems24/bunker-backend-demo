@@ -46,5 +46,5 @@ class IngestionService:
     async def ingest_events(self, bunker_id: str, events: Sequence[EdgeEvent]) -> SaveStats:
         return await self._events.save_batch(bunker_id, events)
 
-    async def ingest_health(self, snapshot: HealthSnapshot) -> None:
-        await self._health.upsert(snapshot)
+    async def ingest_health(self, bunker_id: str, snapshot: HealthSnapshot) -> None:
+        await self._health.upsert(snapshot, bunker_id=bunker_id)

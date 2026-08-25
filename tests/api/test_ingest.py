@@ -20,16 +20,33 @@ async def fetch_scalar(app: FastAPI, sql: str) -> object:
         return await conn.scalar(text(sql))
 
 
+async def fetch_row(app: FastAPI, sql: str) -> tuple[object, ...]:
+    container: Container = app.state.container
+    async with container.engine.begin() as conn:
+        result = await conn.execute(text(sql))
+        row = result.first()
+        return tuple(row) if row is not None else ()
+
+
 class TestAuth:
-    async def test_missing_api_key_rejected_401(self, client: AsyncClient) -> None:
+    async def test_missing_token_rejected_401(self, client: AsyncClient) -> None:
         response = await client.post("/api/v1/telemetry", json=load_fixture("telemetry-valid.json"))
         assert response.status_code == 401
 
-    async def test_wrong_api_key_rejected_403(self, client: AsyncClient) -> None:
+    async def test_wrong_scheme_rejected_401(self, client: AsyncClient) -> None:
+        # Агент шлёт ровно "Bearer <token>" — другая схема не допускается.
         response = await client.post(
             "/api/v1/telemetry",
             json=load_fixture("telemetry-valid.json"),
-            headers={"X-API-Key": "wrong-token"},
+            headers={"Authorization": "Token abc"},
+        )
+        assert response.status_code == 401
+
+    async def test_wrong_token_rejected_403(self, client: AsyncClient) -> None:
+        response = await client.post(
+            "/api/v1/telemetry",
+            json=load_fixture("telemetry-valid.json"),
+            headers={"Authorization": "Bearer wrong-token"},
         )
         assert response.status_code == 403
 
@@ -61,8 +78,8 @@ class TestTelemetry:
         assert h8_flags == "HeightSimulated"
 
     async def test_min_max_computed_on_ingest(self, client: AsyncClient, app: FastAPI) -> None:
-        # Луч 0 (DistanceNotUpdating) и луч 63 (HeightSimulated) исключаются:
-        # min=2.01 (луч 1), max=2.41 (луч 62).
+        # Правило мока: луч 0 (DistanceNotUpdating — «жёсткий» флаг) исключается;
+        # луч 63 (HeightSimulated) остаётся достоверным → max=99.5, min=2.01 (луч 1).
         fixture = load_fixture("telemetry-valid.json")
 
         await client.post("/api/v1/telemetry", json=fixture, headers=auth_headers(app))
@@ -70,7 +87,7 @@ class TestTelemetry:
         min_level = await fetch_scalar(app, "SELECT min_level FROM measurements")
         max_level = await fetch_scalar(app, "SELECT max_level FROM measurements")
         assert min_level == pytest.approx(2.01)
-        assert max_level == pytest.approx(2.41)
+        assert max_level == pytest.approx(99.5)
 
     async def test_duplicate_does_not_insert_twice(self, client: AsyncClient, app: FastAPI) -> None:
         headers = auth_headers(app)
@@ -114,6 +131,32 @@ class TestTelemetry:
         assert response.status_code == 422
         assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 0
 
+    async def test_telemetry_touch_keeps_node_online(
+        self, client: AsyncClient, app: FastAPI
+    ) -> None:
+        """Холодный старт: телеметрия без /health всё равно оживляет узел."""
+        container: Container = app.state.container
+        async with container.engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO bunkers (id, name) VALUES ('bunker-1', 'Бункер №1') "
+                    "ON CONFLICT DO NOTHING"
+                )
+            )
+
+        response = await client.post(
+            "/api/v1/telemetry",
+            json=load_fixture("telemetry-valid.json"),
+            headers=auth_headers(app),
+        )
+
+        assert response.status_code == 200
+        node_id, online = await fetch_row(
+            app, "SELECT node_id, last_seen_at >= now() - interval '2 seconds' FROM edge_nodes"
+        )
+        assert node_id == "edge-1"  # выводится из bunker_id, как в моке и сиде
+        assert online is True
+
 
 class TestNoDataTelemetry:
     """Перебой питания лидара: лучи NotUsed, величины не посчитаны."""
@@ -153,6 +196,57 @@ class TestEvents:
         assert second.json()["duplicates"] == 1
         assert await fetch_scalar(app, "SELECT count(*) FROM edge_events") == 1
 
+    async def test_events_touch_node(self, client: AsyncClient, app: FastAPI) -> None:
+        """Каждый POST продлевает last_seen_at (dead-man, блок F плана)."""
+        container: Container = app.state.container
+        async with container.engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO bunkers (id, name) VALUES ('bunker-1', 'Бункер №1') "
+                    "ON CONFLICT DO NOTHING"
+                )
+            )
+
+        response = await client.post(
+            "/api/v1/events",
+            json=load_fixture("events-valid.json"),
+            headers=auth_headers(app),
+        )
+
+        assert response.status_code == 200
+        node_id, online = await fetch_row(
+            app, "SELECT node_id, last_seen_at >= now() - interval '2 seconds' FROM edge_nodes"
+        )
+        assert node_id == "edge-1"
+        assert online is True
+
+    async def test_quarantined_payload_validated(self, client: AsyncClient, app: FastAPI) -> None:
+        """payload жёстко типизирован и связан с type (контракт EdgePC)."""
+        fixture = load_fixture("events-valid.json")
+        # Правильная пара тип/payload проходит.
+        fixture["events"].append(
+            {
+                "event_id": "9b2f0d47-a111-4f02-9d3e-6f5c8b9012ae",
+                "ts": "2026-08-25T10:01:00Z",
+                "type": "packet_quarantined",
+                "payload": {
+                    "telemetry_packet_id": 42,
+                    "telemetry_packet_event_id": "3f9d51ac-6c33-4a52-b37a-9f2f4d0e5b71",
+                    "attempts": 3,
+                },
+            }
+        )
+
+        ok = await client.post("/api/v1/events", json=fixture, headers=auth_headers(app))
+
+        # Несоответствие payload типу отвергается целиком.
+        fixture["events"][0]["type"] = "radar_recovered"  # payload от radar_down
+
+        bad = await client.post("/api/v1/events", json=fixture, headers=auth_headers(app))
+
+        assert ok.status_code == 200
+        assert bad.status_code == 422
+
     async def test_unknown_event_type_rejected(self, client: AsyncClient, app: FastAPI) -> None:
         fixture = load_fixture("events-valid.json")
         fixture["events"][0]["type"] = "mystery_event"
@@ -181,14 +275,45 @@ class TestHealth:
         first = await client.post("/api/v1/health", json=fixture, headers=headers)
         assert first.status_code == 200
         assert first.json() == {"status": "ok"}
-        assert await fetch_scalar(app, "SELECT count(*) FROM edge_nodes") == 1
-        cpu = await fetch_scalar(app, "SELECT cpu FROM edge_nodes")
+        # node_id выводится из bunker_id (агент его не шлёт).
+        node_id, cpu = await fetch_row(app, "SELECT node_id, cpu FROM edge_nodes")
+        assert node_id == "edge-1"
         assert cpu == pytest.approx(37.5)
+        workers_json = await fetch_scalar(app, "SELECT workers::text FROM edge_nodes")
+        assert isinstance(workers_json, str) and '"dispatch"' in workers_json
+        pending = await fetch_scalar(app, "SELECT pending_count FROM edge_nodes")
+        assert pending == 3
 
         # Повторный снимок обновляет строку, а не добавляет новую.
-        fixture["cpu"] = 44.0
+        fixture["cpu_percent"] = 44.0
         second = await client.post("/api/v1/health", json=fixture, headers=headers)
         assert second.status_code == 200
         assert await fetch_scalar(app, "SELECT count(*) FROM edge_nodes") == 1
         cpu_after = await fetch_scalar(app, "SELECT cpu FROM edge_nodes")
         assert cpu_after == pytest.approx(44.0)
+
+    async def test_health_rejects_legacy_contract(self, client: AsyncClient, app: FastAPI) -> None:
+        """Старое тело (node_id/cpu/edge_time) больше не контракт — 422."""
+        container: Container = app.state.container
+        async with container.engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO bunkers (id, name) VALUES ('bunker-1', 'Бункер №1') "
+                    "ON CONFLICT DO NOTHING"
+                )
+            )
+
+        response = await client.post(
+            "/api/v1/health",
+            json={
+                "node_id": "edge-01",
+                "bunker_id": "bunker-1",
+                "cpu": 37.5,
+                "ram": 62.0,
+                "disk": 71.25,
+                "edge_time": "2026-08-25T10:00:05Z",
+            },
+            headers=auth_headers(app),
+        )
+
+        assert response.status_code == 422
