@@ -10,7 +10,7 @@ from src.domain.value_objects.types import Timestamp
 class Measurement(pydantic.BaseModel):
     """min/max считаются на ингесте по надёжным лучам, не на чтении.
 
-    id — монотонный числовой row-id из БД (контракт мока); при записи
+    id — монотонный числовой row-id из БД; при записи
     присваивается триггером, поэтому в ingest-пути равен None.
     """
 

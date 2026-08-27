@@ -1,7 +1,8 @@
 """Точка входа FastAPI: app factory + lifespan."""
 
+import asyncio
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 import loguru
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from src import __version__
 from src.api.errors import register_error_handlers
+from src.api.middleware import RequestIdMiddleware
 from src.api.ops import router as ops_router
 from src.api.v1.buildup import router as buildup_router
 from src.api.v1.bunkers import router as bunkers_router
@@ -24,10 +26,16 @@ from src.logging_config import setup_logging
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     container: Container = app.state.container
+    monitor_task = asyncio.create_task(container.silence.run(), name="silence-monitor")
     loguru.logger.info("Bunker backend запущен (v{})", __version__)
-    yield
-    await container.engine.dispose()
-    loguru.logger.info("Bunker backend остановлен, пул соединений закрыт")
+    try:
+        yield
+    finally:
+        monitor_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await monitor_task
+        await container.engine.dispose()
+        loguru.logger.info("Bunker backend остановлен, пул соединений закрыт")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -43,22 +51,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.container = container
 
     # Порядок важен: последний добавленный middleware — внешний.
-    # GZip внутри CORS, чтобы сжатые ответы и ошибки несли CORS-заголовки.
+    # Request-id снаружи, GZip внутри CORS — сжатые ответы несут CORS-заголовки.
     app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.api.cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        expose_headers=["X-Request-ID"],
     )
+    app.add_middleware(RequestIdMiddleware)
 
     register_error_handlers(app)
 
     app.include_router(ops_router)
-    # Bearer-токен проверяется на уровне роутера (см. api/deps.require_edge_token).
     app.include_router(ingest_router)
-    # Read-контур фронта (шаг 3): формат ответов = контракт мока 1:1.
     app.include_router(bunkers_router)
     app.include_router(stats_router)
     app.include_router(buildup_router)

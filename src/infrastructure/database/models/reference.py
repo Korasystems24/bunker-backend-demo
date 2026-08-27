@@ -11,7 +11,7 @@ from src.infrastructure.database.models.base import Base
 
 
 class BunkerModel(Base):
-    """Бункер. id — строка ('bunker-1'), как в моке и конфигураторе."""
+    """Бункер. id — строка ('bunker-1')."""
 
     __tablename__ = "bunkers"
 
@@ -23,7 +23,7 @@ class BunkerModel(Base):
 
 
 class GeometryModel(Base):
-    """Геометрия бункера: форма, датчик и лучи (JSONB, контракт мока 1:1)."""
+    """Геометрия бункера: форма, датчик и лучи (JSONB)."""
 
     __tablename__ = "geometries"
 

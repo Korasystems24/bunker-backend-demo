@@ -13,8 +13,6 @@ class NotFoundError(DomainError):
         self.message = message
 
 
-# Тексты совпадают с телами ошибок мока: latest → "No measurements",
-# stats/buildup → "No data", неизвестный бункер → "Bunker not found".
 class BunkerNotFoundError(NotFoundError):
     def __init__(self) -> None:
         super().__init__("Bunker not found")
@@ -28,3 +26,10 @@ class MeasurementsNotFoundError(NotFoundError):
 class NoDataNotFoundError(NotFoundError):
     def __init__(self) -> None:
         super().__init__("No data")
+
+
+class UnknownBunkerError(DomainError):
+    """Edge прислал bunker_id, которого нет в справочнике (ingest → 422)."""
+
+    def __init__(self) -> None:
+        super().__init__("Unknown bunker")

@@ -1,4 +1,4 @@
-"""Единый формат ошибок API: {"error": "..."} — как у мока (план, блок H)."""
+"""Единый формат ошибок API: {"error": "..."}."""
 
 from typing import Any
 
@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 
-from src.domain.exceptions import DomainError, NotFoundError
+from src.domain.exceptions import DomainError, NotFoundError, UnknownBunkerError
 
 
 def _error_body(message: object) -> dict[str, str]:
@@ -40,9 +40,11 @@ async def handle_validation_exception(_request: Request, exc: Exception) -> JSON
 
 async def handle_domain_error(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
-    status = 404 if isinstance(exc, NotFoundError) else 400
-    message = exc.message if isinstance(exc, NotFoundError) else str(exc)
-    return JSONResponse(_error_body(message), status_code=status)
+    if isinstance(exc, NotFoundError):
+        return JSONResponse(_error_body(exc.message), status_code=404)
+    if isinstance(exc, UnknownBunkerError):
+        return JSONResponse(_error_body(str(exc)), status_code=422)
+    return JSONResponse(_error_body(str(exc)), status_code=400)
 
 
 def register_error_handlers(app: fastapi.FastAPI) -> None:

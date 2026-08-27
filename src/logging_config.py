@@ -15,7 +15,6 @@ _CONSOLE_FORMAT = (
 
 def setup_logging(*, level: str = "INFO", json_logs: bool = False) -> None:
     logger.remove()
-    # request_id проставится request-middleware (шаг 5); до тех пор — прочерк.
     logger.configure(extra={"request_id": "-"})
     if json_logs:
         logger.add(sys.stderr, level=level, serialize=True)

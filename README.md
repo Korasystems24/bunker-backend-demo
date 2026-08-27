@@ -1,7 +1,7 @@
-# backend-demo — серверная часть системы мониторинга бункеров
+# backend — приём телеметрии EdgePC, TimescaleDB, Query API для фронта
 
-Приём телеметрии от EdgePC-агента, хранение временных рядов в PostgreSQL +
-TimescaleDB и Query API для фронтенда. Реализация плана `docs/backend-demo-plan.md`.
+Серверная часть системы мониторинга бункеров: агент сам доставляет пакеты
+(at-least-once), сервер гасит дубли и отдаёт фронту временные ряды.
 
 ## Стек
 
@@ -12,112 +12,78 @@ pydantic-settings · loguru · TimescaleDB (pg16) · Docker Compose · ruff + ba
 
 ```text
 src/
-├── main.py                  # app factory + lifespan + CORS/gzip
-├── bootstrap.py             # composition root (сборка зависимостей)
+├── main.py                  # app factory + lifespan + CORS/gzip/request-id
+├── bootstrap.py             # composition root
 ├── config/settings.py       # pydantic-settings, секции BUNKER_*
-├── logging_config.py        # loguru (+ request_id extra)
 ├── api/
-│   ├── ops.py               # GET /healthz (liveness самого API)
-│   ├── errors.py            # единый формат ошибок {"error": "..."}
-│   ├── schemas/             # DTO (ingest = контракт edge, query = контракт мока)
-│   └── v1/
-│       ├── ingest.py        # POST /telemetry /events /health (Authorization: Bearer)
-│       ├── bunkers.py       # GET /bunkers, /geometry (ETag), /measurements[/latest]
-│       ├── stats.py         # GET .../stats?period=day|week|month
-│       ├── buildup.py       # GET .../buildup (эвристика v1, on-read)
-│       └── health.py        # GET /api/v1/health (edge_pcs)
-├── application/
-│   ├── ingestion/           # IngestionService (write-контур)
-│   └── query/               # QueryService (read-контур CQRS-lite)
-├── domain/                  # сущности, VO, порты
+│   ├── ops.py               # GET /healthz, /readyz
+│   ├── middleware.py        # X-Request-ID
+│   └── v1/                  # ingest + query
+├── application/             # ingestion, query, buildup, silence
+├── domain/
 └── infrastructure/database/
-    ├── engine.py            # async engine + sessionmaker (asyncpg)
-    ├── models/              # ORM ТОЛЬКО справочных таблиц (bunkers, geometries)
-    └── repositories/        # Sql*-репозитории: ВЕСЬ тайм-серийный SQL здесь
-scripts/seed_demo.py         # генератор истории ИЗ МОКА → COPY в БД
-alembic/versions/            # схема: гипертаблицы, политики Timescale
-docker/                      # entrypoint api, init SQL для БД
+scripts/seed_catalog.py      # справочник bunkers + geometries
+alembic/versions/
+docker/
 ```
 
 ## Быстрый старт (локально)
 
 ```bash
-uv sync                                        # зависимости + .venv
-docker compose up -d db                        # PostgreSQL + TimescaleDB
-cp .env.example .env                           # и заполнить значения
-uv run alembic upgrade head                    # схема v1 + политики
-uv run uvicorn src.main:app --reload           # http://localhost:8000
-curl http://localhost:8000/healthz             # {"status":"ok",...}
-```
-
-## Быстрый старт (Docker)
-
-```bash
-docker compose up --build     # api сам применит миграции перед стартом
+uv sync
+docker compose up -d db
+cp .env.example .env
+uv run alembic upgrade head
+uv run python scripts/seed_catalog.py
+uv run uvicorn src.main:app --reload
 curl http://localhost:8000/healthz
+curl http://localhost:8000/readyz
 ```
 
-Проверка Timescale:
+Деплой на Ubuntu с публичным IP — [DEPLOY.md](DEPLOY.md).
+
+## Docker
 
 ```bash
-docker compose exec db psql -U bunker -d bunker -c "\dx"
-docker compose exec db psql -U bunker -d bunker \
-  -c "SELECT hypertable_name, num_chunks FROM timescaledb_information.hypertables;"
+docker compose up --build
 ```
+
+Postgres снаружи слушает только `127.0.0.1`. API — порт `8000`.
 
 ## Конфигурация
 
-Все настройки — через переменные окружения `BUNKER_*` (вложенность через `__`),
-см. `.env.example`. Секреты в git не попадают.
+Переменные `BUNKER_*`, вложенность через `__`, см. `.env.example`.
 
-## Статус (план работ)
-
-- [x] Шаг 1 / День 1 — каркас и хранилище (compose, Alembic, healthz)
-- [x] Шаг 2 / День 2 — Ingestion API (`/telemetry`, `/events`, `/health`), дедуп, Bearer-токен, контрактные тесты
-- [x] Шаг 3 / День 3 — Query API для фронта, seed_demo, CORS/gzip
-- [ ] Шаг 4 / День 4 — buildup v1, SilenceMonitor, continuous aggregates
-- [ ] Шаг 5 / День 5 — полировка, нагрузочный прогон, репетиция демо
-
-## Query API (формат = контракт мока 1:1)
+## Query API
 
 ```text
-GET /api/v1/bunkers                                  → [{id, name, online, geometry_id}]
-GET /api/v1/bunkers/:id/geometry                     → {bunker_id, shape, sensor, beams} (+ETag/304)
-GET /api/v1/bunkers/:id/measurements/latest          → последнее измерение + 64 луча
-GET /api/v1/bunkers/:id/measurements?from&to&limit&offset → страница БЕЗ beams (limit ≤ 100, как в моке)
-GET /api/v1/bunkers/:id/stats?period=day|week|month  → серверные бакеты time_bucket
-GET /api/v1/bunkers/:id/buildup                      → зоны налипания (эвристика v1, on-read)
-GET /api/v1/health                                   → {edge_pcs: [...]}
+GET /api/v1/bunkers
+GET /api/v1/bunkers/:id/geometry
+GET /api/v1/bunkers/:id/measurements/latest
+GET /api/v1/bunkers/:id/measurements?from&to&limit&offset
+GET /api/v1/bunkers/:id/stats?period=day|week|month
+GET /api/v1/bunkers/:id/buildup
+GET /api/v1/health
 ```
 
-Защита фронта от лагов: списочные ручки не отдают `beams`, `limit` жёстко ограничен,
-графики строятся только из серверных бакетов `stats` (≤ ~1000 точек), включены gzip и CORS.
-Тексты ошибок — как у мока: `"Bunker not found"` / `"No measurements"` (latest) / `"No data"` (stats, buildup).
+Списочные ручки не отдают `beams`. `limit` ≤ 100. Графики — только серверные
+часовые бакеты. Ошибки: `{"error": "..."}` — `"Bunker not found"`,
+`"No measurements"`, `"No data"`.
 
-## Подключение EdgePC
-
-Агент отправляет данные на сервер сам (at-least-once); на его стороне задаются:
+## Ingestion API (EdgePC)
 
 | Переменная EdgePC | Значение |
 | --- | --- |
-| `DISPATCH__HTTP__SERVER_URL` | `http://<host>:8000/api/v1` — префикс `/api/v1` обязателен: агент аппендит голые пути `telemetry`/`events`/`health` |
-| `DISPATCH__HTTP__AUTH_TOKEN` | то же значение, что `BUNKER_API__EDGE_AUTH_TOKEN`; передаётся заголовком `Authorization: Bearer <token>` |
+| `DISPATCH__HTTP__SERVER_URL` | `http://<host>:8000/api/v1` |
+| `DISPATCH__HTTP__AUTH_TOKEN` | = `BUNKER_API__EDGE_AUTH_TOKEN` |
 
-Семантика ответов (агент парсит только статус-код): `200` — успех, включая
-полный дубль; `401` — нет заголовка/схемы, `403` — неверный токен → агент
-останавливает диспетчеризацию; `422` — батч отброшен целиком (изоляцию пакетов
-делает edge); `429`/5xx — агент ретраит. Тело `POST /health` — снимок агента:
-`ts`, `workers`, `pending_count`, `quarantined_count`, `free_bytes`,
-`storage_paused`, `cpu_percent`/`memory_percent`/`disk_percent`; `node_id`
-агент не шлёт — узел идентифицируется по бункеру (`bunker-1` → `edge-1`).
-Каждый из трёх POST продлевает `edge_nodes.last_seen_at`.
+`POST /telemetry`, `/events`, `/health` с `Authorization: Bearer`. `200` — успех
+включая дубль; `401`/`403` — токен; `422` — батч целиком (в том числе неизвестный
+`bunker_id`); `5xx` — ретрай. Уровни и высоты лучей приходят в миллиметрах,
+в хранилище и Query API — метры. `node_id` агент не шлёт (`bunker-1` → `edge-1`).
 
-## Сидинг демо-истории
+Справочник бункеров обязан существовать до первого пакета:
 
 ```bash
-uv run python scripts/seed_demo.py --reset   # 30 дней × 2 бункера через COPY (~20 c)
+uv run python scripts/seed_catalog.py
 ```
-
-Генератор — прямой порт мока: дрейф уровня, налипание на оси C/F, деградация внешних
-лучей. Сид заливает также bunkers/geometries (справочник конфигуратора) и edge_nodes
-(узлы сразу online).

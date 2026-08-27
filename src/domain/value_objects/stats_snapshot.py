@@ -6,9 +6,8 @@ from src.domain.value_objects.series_point import SeriesPoint
 
 
 class StatsSnapshot(pydantic.BaseModel):
-    """Общие min/max/avg считаются по avg_level сырых измерений периода — так же,
-
-    как в моке (allLevels), а не по бакетам серии.
+    """Общие min/max/avg считаются по avg_level сырых измерений периода,
+    а не по бакетам серии.
     """
 
     model_config = pydantic.ConfigDict(frozen=True)
