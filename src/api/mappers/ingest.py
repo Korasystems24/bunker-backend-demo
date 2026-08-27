@@ -1,7 +1,6 @@
-"""Явное преобразование HTTP DTO (mm) в доменные модели (m)."""
+"""HTTP DTO → доменные модели. Уровни и высоты лучей уже в метрах."""
 
 from src.api.schemas.ingest import EventIn, HealthRequest, TelemetryPacketIn
-from src.application.ingestion.units import mm_to_m
 from src.domain.entities.edge_event import EdgeEvent
 from src.domain.entities.health_snapshot import HealthSnapshot
 from src.domain.entities.telemetry_packet import TelemetryPacket
@@ -12,12 +11,12 @@ def telemetry_packet_to_domain(packet: TelemetryPacketIn) -> TelemetryPacket:
     return TelemetryPacket(
         event_id=packet.event_id,
         ts=packet.ts,
-        avg_level=mm_to_m(packet.avg_level),
+        avg_level=packet.avg_level,
         mass=packet.mass,
         volume=packet.volume,
         beams=[
             Beam(
-                height=mm_to_m(beam.height),
+                height=beam.height,
                 raw_status=beam.raw_status,
                 status=beam.status,
             )

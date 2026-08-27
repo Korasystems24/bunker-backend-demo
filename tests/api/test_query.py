@@ -403,10 +403,10 @@ class TestBuildup:
         await seed_bunkers(app)
         # Ось A — ровный склон; ось B — внешние позиции подняты над уклоном.
         # Compute-on-write: зоны появляются только через ingest.
-        # POST — миллиметры (контракт EdgePC); GET /buildup — метры.
-        heights_a = [(2.0 - 0.1 * (p - 1)) * 1000 for p in range(1, 9)]
+        # POST и GET /buildup — метры.
+        heights_a = [2.0 - 0.1 * (p - 1) for p in range(1, 9)]
         heights_b = [
-            (2.0 - 0.1 * (p - 1) + (1.0 if p >= 6 else 0.0)) * 1000 for p in range(1, 9)
+            2.0 - 0.1 * (p - 1) + (1.0 if p >= 6 else 0.0) for p in range(1, 9)
         ]
         beams: list[dict[str, Any]] = []
         for _axis, heights in (("A", heights_a), ("B", heights_b)):
@@ -414,14 +414,14 @@ class TestBuildup:
                 beams.append({"height": height, "raw_status": None, "status": []})
         for _axis in "CDEFGH":
             for _ in range(8):
-                beams.append({"height": 2000.0, "raw_status": None, "status": []})
+                beams.append({"height": 2.0, "raw_status": None, "status": []})
         payload = {
             "bunker_id": "bunker-1",
             "packets": [
                 {
                     "event_id": str(uuid.uuid4()),
                     "ts": datetime.now(UTC).isoformat(),
-                    "avg_level": 2000.0,
+                    "avg_level": 2.0,
                     "mass": 10.0,
                     "volume": 5.0,
                     "beams": beams,

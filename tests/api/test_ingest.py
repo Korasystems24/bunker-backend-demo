@@ -80,8 +80,8 @@ class TestTelemetry:
         assert h8_flags == "HeightSimulated"
 
     async def test_min_max_computed_on_ingest(self, client: AsyncClient, app: FastAPI) -> None:
-        # Edge шлёт миллиметры: луч 0 (DistanceNotUpdating) исключается;
-        # луч 63 (HeightSimulated) остаётся → в БД метры, max=99.5, min=2.01.
+        # Edge шлёт метры: луч 0 (DistanceNotUpdating) исключается;
+        # луч 63 (HeightSimulated) остаётся → max=99.5, min=2.01.
         fixture = load_fixture("telemetry-valid.json")
 
         await client.post("/api/v1/telemetry", json=fixture, headers=auth_headers(app))

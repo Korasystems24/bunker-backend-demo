@@ -38,7 +38,6 @@
     }
   },
   "bunkers": [
-    {"id": "bunker-1", "name": "Бункер №1"},
-    {"id": "bunker-2", "name": "Бункер №2"}
+    {"id": "bunker-1", "name": "Бункер №1"}
   ]
 }

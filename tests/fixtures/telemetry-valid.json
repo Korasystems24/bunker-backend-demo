@@ -4,329 +4,329 @@
     {
       "event_id": "3f9d51ac-6c33-4a52-b37a-9f2f4d0e5b71",
       "ts": "2026-08-25T10:00:00Z",
-      "avg_level": 3140.0,
+      "avg_level": 3.14,
       "mass": 1187.4,
       "volume": 1425.8,
       "beams": [
         {
-          "height": 10.0,
+          "height": 0.01,
           "raw_status": null,
           "status": [
             "DistanceNotUpdating"
           ]
         },
         {
-          "height": 2009.9999999999998,
+          "height": 2.01,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2020.0,
+          "height": 2.02,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2029.9999999999998,
+          "height": 2.03,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2040.0,
+          "height": 2.04,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2050.0,
+          "height": 2.05,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2060.0,
+          "height": 2.06,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2070.0,
+          "height": 2.07,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2050.0,
+          "height": 2.05,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2060.0,
+          "height": 2.06,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2070.0,
+          "height": 2.07,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2080.0,
+          "height": 2.08,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2090.0,
+          "height": 2.09,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2100.0,
+          "height": 2.1,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2110.0,
+          "height": 2.11,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2120.0,
+          "height": 2.12,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2100.0,
+          "height": 2.1,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2110.0,
+          "height": 2.11,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2120.0,
+          "height": 2.12,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2130.0,
+          "height": 2.13,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2140.0,
+          "height": 2.14,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2150.0,
+          "height": 2.15,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2160.0,
+          "height": 2.16,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2170.0,
+          "height": 2.17,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2150.0,
+          "height": 2.15,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2160.0,
+          "height": 2.16,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2170.0,
+          "height": 2.17,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2180.0,
+          "height": 2.18,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2190.0,
+          "height": 2.19,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2200.0,
+          "height": 2.2,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2210.0,
+          "height": 2.21,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2220.0,
+          "height": 2.22,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2200.0,
+          "height": 2.2,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2210.0,
+          "height": 2.21,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2220.0,
+          "height": 2.22,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2230.0,
+          "height": 2.23,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2240.0,
+          "height": 2.24,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2250.0,
+          "height": 2.25,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2260.0,
+          "height": 2.26,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2270.0,
+          "height": 2.27,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2250.0,
+          "height": 2.25,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2260.0,
+          "height": 2.26,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2270.0,
+          "height": 2.27,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2280.0,
+          "height": 2.28,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2290.0,
+          "height": 2.29,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2300.0,
+          "height": 2.3,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2310.0,
+          "height": 2.31,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2320.0,
+          "height": 2.32,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2300.0,
+          "height": 2.3,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2310.0,
+          "height": 2.31,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2320.0,
+          "height": 2.32,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2330.0,
+          "height": 2.33,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2340.0,
+          "height": 2.34,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2350.0,
+          "height": 2.35,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2360.0,
+          "height": 2.36,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2370.0,
+          "height": 2.37,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2350.0,
+          "height": 2.35,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2360.0,
+          "height": 2.36,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2370.0,
+          "height": 2.37,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2380.0,
+          "height": 2.38,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2390.0,
+          "height": 2.39,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2400.0,
+          "height": 2.4,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 2410.0,
+          "height": 2.41,
           "raw_status": null,
           "status": []
         },
         {
-          "height": 99500.0,
+          "height": 99.5,
           "raw_status": null,
           "status": [
             "HeightSimulated"

@@ -110,7 +110,7 @@ class WorkerHealthIn(pydantic.BaseModel):
 
 
 class TelemetryRequest(pydantic.BaseModel):
-    """Пакеты как шлёт EdgePC: avg_level и Beam.height — миллиметры."""
+    """Пакеты как шлёт EdgePC: avg_level и Beam.height — метры."""
 
     bunker_id: BunkerId
     packets: list[TelemetryPacketIn] = pydantic.Field(min_length=1)
