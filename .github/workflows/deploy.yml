@@ -39,12 +39,13 @@ jobs:
           set -euo pipefail
           : "${DEPLOY_HOST:?Set secret DEPLOY_HOST (public IP or DNS)}"
           : "${DEPLOY_USER:?Set secret DEPLOY_USER}"
-          : "${DEPLOY_PATH:?Set secret DEPLOY_PATH (e.g. /opt/bunker-backend)}"
+          : "${DEPLOY_PATH:?Set secret DEPLOY_PATH (e.g. projects/bunker)}"
           PORT="${DEPLOY_PORT:-22}"
           SSH=(ssh -i ~/.ssh/id_ed25519 -p "$PORT" -o IdentitiesOnly=yes)
           RSYNC_RSH="ssh -i ~/.ssh/id_ed25519 -p $PORT -o IdentitiesOnly=yes"
 
-          "${SSH[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$DEPLOY_PATH'"
+          # относительный путь — от $HOME на сервере (projects/bunker → ~/projects/bunker)
+          "${SSH[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "cd && mkdir -p '$DEPLOY_PATH'"
 
           rsync -az --delete \
             --exclude '.git/' \
@@ -57,4 +58,4 @@ jobs:
             -e "$RSYNC_RSH" \
             ./ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
 
-          "${SSH[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && bash scripts/deploy.sh"
+          "${SSH[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "cd && cd '$DEPLOY_PATH' && bash scripts/deploy.sh"
