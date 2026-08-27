@@ -61,6 +61,10 @@ class TestTelemetry:
         assert response.json() == {"received": 1, "inserted": 1, "duplicates": 0}
         assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 1
         assert await fetch_scalar(app, "SELECT count(*) FROM beam_readings") == 64
+        assert await fetch_scalar(app, "SELECT count(*) FROM buildup_zones") == 8
+        assert (
+            await fetch_scalar(app, "SELECT DISTINCT algorithm_version FROM buildup_zones")
+        ) == "radial-slope-v1"
 
         # Имена лучов выводятся из позиции; флаги складываются в строку.
         a1_flags = await fetch_scalar(
@@ -78,8 +82,8 @@ class TestTelemetry:
         assert h8_flags == "HeightSimulated"
 
     async def test_min_max_computed_on_ingest(self, client: AsyncClient, app: FastAPI) -> None:
-        # Правило мока: луч 0 (DistanceNotUpdating — «жёсткий» флаг) исключается;
-        # луч 63 (HeightSimulated) остаётся достоверным → max=99.5, min=2.01 (луч 1).
+        # Edge шлёт миллиметры: луч 0 (DistanceNotUpdating) исключается;
+        # луч 63 (HeightSimulated) остаётся → в БД метры, max=99.5, min=2.01.
         fixture = load_fixture("telemetry-valid.json")
 
         await client.post("/api/v1/telemetry", json=fixture, headers=auth_headers(app))
@@ -103,6 +107,7 @@ class TestTelemetry:
         assert second.json()["duplicates"] == 1
         assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 1
         assert await fetch_scalar(app, "SELECT count(*) FROM beam_readings") == 64
+        assert await fetch_scalar(app, "SELECT count(*) FROM buildup_zones") == 8
 
     async def test_invalid_batch_rejected_without_writes(
         self, client: AsyncClient, app: FastAPI
@@ -117,6 +122,7 @@ class TestTelemetry:
         assert response.status_code == 422
         assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 0
         assert await fetch_scalar(app, "SELECT count(*) FROM beam_readings") == 0
+        assert await fetch_scalar(app, "SELECT count(*) FROM buildup_zones") == 0
 
     async def test_mixed_batch_is_all_or_nothing(self, client: AsyncClient, app: FastAPI) -> None:
         # Второй пакет батча невалиден → первый (валидный) тоже не пишется.
@@ -154,8 +160,22 @@ class TestTelemetry:
         node_id, online = await fetch_row(
             app, "SELECT node_id, last_seen_at >= now() - interval '2 seconds' FROM edge_nodes"
         )
-        assert node_id == "edge-1"  # выводится из bunker_id, как в моке и сиде
+        assert node_id == "edge-1"  # выводится из bunker_id ('bunker-1' → 'edge-1')
         assert online is True
+
+
+class TestUnknownBunker:
+    async def test_unknown_bunker_rejected_422(self, client: AsyncClient, app: FastAPI) -> None:
+        fixture = load_fixture("telemetry-valid.json")
+        fixture["bunker_id"] = "bunker-missing"
+
+        response = await client.post(
+            "/api/v1/telemetry", json=fixture, headers=auth_headers(app)
+        )
+
+        assert response.status_code == 422
+        assert response.json() == {"error": "Unknown bunker"}
+        assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 0
 
 
 class TestNoDataTelemetry:

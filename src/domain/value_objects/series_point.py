@@ -6,7 +6,7 @@ import pydantic
 
 from src.domain.value_objects.types import Timestamp
 
-# Числа приходят из SQL-агрегатов, уже округленные до формата мока;
+# Числа приходят из SQL-агрегатов, уже округленные;
 # отсутствие данных в бакете выражается None (бакет не должен существовать,
 # но схема допускает «пустые» величины как в measurements).
 Rounded = Annotated[float | None, pydantic.Field(allow_inf_nan=False)]

@@ -1,10 +1,9 @@
-"""Контрактные тесты Query API (чек-лист дня 3 плана, блок B).
-
-Проверяется совместимость с моком: форма ответов, отсутствие beams в списках,
+"""Проверяется форма ответов Query API, отсутствие beams в списках,
 серверная агрегация stats, ETag/304 на геометрии, gzip/CORS, формат ошибок.
 """
 
 import json
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -12,6 +11,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import text
+from tests.conftest import auth_headers, refresh_hourly_cagg
 
 if TYPE_CHECKING:
     from src.bootstrap import Container
@@ -113,7 +113,7 @@ def hours_ago(hours: float) -> datetime:
 
 
 class TestBunkers:
-    async def test_list_matches_mock_contract(self, client: AsyncClient, app: FastAPI) -> None:
+    async def test_list_matches_query_contract(self, client: AsyncClient, app: FastAPI) -> None:
         await seed_bunkers(app)
         await seed_online_node(app)
 
@@ -273,6 +273,7 @@ class TestStats:
         await insert_measurement(app, "bunker-1", anchor, avg_level=1.0)
         await insert_measurement(app, "bunker-1", anchor + timedelta(minutes=20), avg_level=3.0)
         await insert_measurement(app, "bunker-1", anchor + timedelta(hours=1), avg_level=5.0)
+        await refresh_hourly_cagg(app)
 
         response = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "day"})
 
@@ -294,34 +295,34 @@ class TestStats:
         await insert_measurement(app, "bunker-1", hours_ago(1), avg_level=2.0)
         await insert_measurement(app, "bunker-1", hours_ago(25), avg_level=4.0)
         await insert_measurement(app, "bunker-1", hours_ago(24 * 29), avg_level=6.0)
+        await refresh_hourly_cagg(app)
 
         week = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "week"})
         month = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "month"})
         day = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "day"})
 
-        # week (окно 7д): строки 1ч и 25ч → две точки по 6 часов;
+        # week (окно 7д): строки 1ч и 25ч → две часовые точки;
         # month (30д): все три; day (24ч): только свежая.
         assert len(week.json()["series"]) == 2
         assert len(month.json()["series"]) == 3
         assert len(day.json()["series"]) == 1
 
-    async def test_empty_period_falls_back_to_recent(
-        self, client: AsyncClient, app: FastAPI
-    ) -> None:
-        """Данные вне периода не оставляют график пустым (fallback мока)."""
+    async def test_empty_period_is_404(self, client: AsyncClient, app: FastAPI) -> None:
+        """Данные старше горизонта периода не подставляются в график."""
         await seed_bunkers(app)
         for days in (31, 32, 33):
             await insert_measurement(
                 app, "bunker-1", datetime.now(UTC) - timedelta(days=days), avg_level=2.0
             )
+        await refresh_hourly_cagg(app)
 
         response = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "day"})
 
-        assert response.status_code == 200
-        assert len(response.json()["series"]) >= 1
+        assert response.status_code == 404
+        assert response.json() == {"error": "No data"}
 
     async def test_no_data_at_all_404(self, client: AsyncClient, app: FastAPI) -> None:
-        """Совсем без измерений мок отдаёт 404 {"error": "No data"}."""
+        """Совсем без измерений — 404 {"error": "No data"}."""
         await seed_bunkers(app)
 
         response = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "day"})
@@ -373,7 +374,14 @@ class TestHttpBehavior:
         assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
         assert "access-control-allow-origin" not in denied.headers
 
-    async def test_errors_use_mock_error_format(self, client: AsyncClient) -> None:
+    async def test_readyz_and_request_id(self, client: AsyncClient) -> None:
+        response = await client.get("/readyz")
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        assert response.headers["x-request-id"]
+
+    async def test_errors_use_error_format(self, client: AsyncClient) -> None:
         response = await client.get("/api/v1/nope")
 
         assert response.status_code == 404
@@ -394,10 +402,37 @@ class TestBuildup:
     async def test_zones_contract_and_math(self, client: AsyncClient, app: FastAPI) -> None:
         await seed_bunkers(app)
         # Ось A — ровный склон; ось B — внешние позиции подняты над уклоном.
-        beams = [(f"A{p}", 2.0 - 0.1 * (p - 1), "") for p in range(1, 9)]
-        beams += [(f"B{p}", 2.0 - 0.1 * (p - 1), "") for p in range(1, 6)]
-        beams += [(f"B{p}", 2.0 - 0.1 * (p - 1) + 1.0, "") for p in range(6, 9)]
-        await insert_measurement(app, "bunker-1", hours_ago(0.01), avg_level=2.0, beams=beams)
+        # Compute-on-write: зоны появляются только через ingest.
+        # POST — миллиметры (контракт EdgePC); GET /buildup — метры.
+        heights_a = [(2.0 - 0.1 * (p - 1)) * 1000 for p in range(1, 9)]
+        heights_b = [
+            (2.0 - 0.1 * (p - 1) + (1.0 if p >= 6 else 0.0)) * 1000 for p in range(1, 9)
+        ]
+        beams: list[dict[str, Any]] = []
+        for _axis, heights in (("A", heights_a), ("B", heights_b)):
+            for height in heights:
+                beams.append({"height": height, "raw_status": None, "status": []})
+        for _axis in "CDEFGH":
+            for _ in range(8):
+                beams.append({"height": 2000.0, "raw_status": None, "status": []})
+        payload = {
+            "bunker_id": "bunker-1",
+            "packets": [
+                {
+                    "event_id": str(uuid.uuid4()),
+                    "ts": datetime.now(UTC).isoformat(),
+                    "avg_level": 2000.0,
+                    "mass": 10.0,
+                    "volume": 5.0,
+                    "beams": beams,
+                }
+            ],
+        }
+
+        ingested = await client.post(
+            "/api/v1/telemetry", json=payload, headers=auth_headers(app)
+        )
+        assert ingested.status_code == 200
 
         response = await client.get("/api/v1/bunkers/bunker-1/buildup")
 
@@ -405,6 +440,7 @@ class TestBuildup:
         body = response.json()
         assert body["bunker_id"] == "bunker-1"
         assert body["threshold_m"] == pytest.approx(0.35)
+        assert body["algorithm_version"] == "radial-slope-v1"
         assert [z["axis"] for z in body["zones"]] == list("ABCDEFGH")
         by_axis = {z["axis"]: z for z in body["zones"]}
         assert by_axis["A"]["severity"] == "none"
@@ -419,5 +455,5 @@ class TestBuildup:
         response = await client.get("/api/v1/bunkers/bunker-1/buildup")
 
         assert response.status_code == 404
-        # Текст ошибки — как у мока ("No data"), не как у /latest.
+        # Текст ошибки — как у stats ("No data"), не как у /latest.
         assert response.json() == {"error": "No data"}

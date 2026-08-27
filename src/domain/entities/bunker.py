@@ -6,7 +6,7 @@ import pydantic
 class Bunker(pydantic.BaseModel):
     """online — производственная характеристика узла edge, а не свойство бункера;
 
-    считается репозиторием по свежести last_seen_at (dead-man, шаг 4 формализует).
+    считается репозиторием по свежести last_seen_at (dead-man).
     """
 
     model_config = pydantic.ConfigDict(frozen=True)

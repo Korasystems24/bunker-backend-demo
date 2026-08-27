@@ -1,10 +1,10 @@
-"""Value object: луч в ответе Query API (контракт мока 1:1)."""
+"""Value object: луч в ответе Query API."""
 
 import pydantic
 
 
 class BeamReading(pydantic.BaseModel):
-    """status — строка флагов через ', ' ('' для надёжного луча), как отдаёт мок."""
+    """status — строка флагов через ', ' ('' если флагов нет)."""
 
     model_config = pydantic.ConfigDict(frozen=True)
 

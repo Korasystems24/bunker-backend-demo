@@ -20,18 +20,21 @@ class DatabaseSettings(pydantic.BaseModel):
 class ApiSettings(pydantic.BaseModel):
     # Явный allowlist origin'ов фронта; '*' не используется.
     cors_origins: list[str] = pydantic.Field(
-        default_factory=lambda: ["http://localhost:5173"],
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ],
     )
     # Bearer-токен edge-устройств для POST-ручек (Authorization: Bearer),
     # как шлёт агент EdgePC. Значение должно совпадать с DISPATCH__HTTP__AUTH_TOKEN.
     edge_auth_token: str = "change-me-edge-token"
-    # Порог тишины узла edge для признака online (read-side dead-man;
-    # фоновый SilenceMonitor с алертами — шаг 4). Для демо — 2 минуты.
-    edge_stale_after_sec: int = 120
+    # Порог тишины узла: нет telemetry/events/health дольше этого — offline.
+    edge_stale_after_sec: int = 300
+    silence_poll_interval_sec: int = 30
 
 
 class BuildupSettings(pydantic.BaseModel):
-    """Параметры эвристики налипания v1 (пороги — из мока; меняются без правки кода)."""
+    """Параметры эвристики налипания v1 (пороги меняются без правки кода)."""
 
     outer_position_threshold: int = 6
     deviation_threshold_m: float = 0.35

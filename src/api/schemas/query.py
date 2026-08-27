@@ -1,6 +1,6 @@
-"""DTO выдачи фронту: контракт мока 1:1 (docs/backend-demo-plan.md, блок B).
+"""DTO выдачи фронту.
 
-Отступления от мока закреплены планом:
+Отступления от сырого ingest:
 - списочная /measurements не отдаёт beams (защита от лагов фронта);
 - limit жёстко ограничен сервером (clamp в QueryService).
 """
@@ -15,7 +15,7 @@ class BunkerOut(pydantic.BaseModel):
     id: str
     name: str
     online: bool
-    # Идентификатор геометрии как в моке ('geom-bunker-1'); выводится из id,
+    # Идентификатор геометрии ('geom-bunker-1'); выводится из id,
     # потому что в БД геометрия ключуется самим бункером.
     geometry_id: str
 
@@ -96,6 +96,7 @@ class BuildupOut(pydantic.BaseModel):
     bunker_id: str
     ts: datetime
     threshold_m: float
+    algorithm_version: str
     zones: list[AxisZoneOut]
 
 
