@@ -1,4 +1,4 @@
-"""GET /api/v1/health — состояние edge-узлов (контракт мока edge_pcs)."""
+"""GET /api/v1/health — состояние edge-узлов."""
 
 from fastapi import APIRouter
 

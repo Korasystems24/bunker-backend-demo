@@ -47,7 +47,7 @@ def _measurement_out(measurement: Measurement) -> MeasurementOut:
 @router.get("")
 async def list_bunkers(container: ContainerDep) -> list[BunkerOut]:
     bunkers = await container.query.list_bunkers()
-    # geometry_id выводится из id, как в моке ('geom-bunker-1'):
+    # geometry_id выводится из id бункера ('geom-bunker-1'):
     # в БД геометрия ключуется самим бункером.
     return [
         BunkerOut(id=b.id, name=b.name, online=b.online, geometry_id=f"geom-{b.id}")
@@ -66,7 +66,7 @@ async def get_geometry(
         bunker_id=geometry.bunker_id,
         shape=geometry.shape,
         sensor=geometry.sensor,
-        # Явная валидация dict → DTO: расхождение с контрактом мока = 500, не тишина.
+        # Явная валидация dict → DTO: расхождение с контрактом = 500, не тишина.
         beams=[GeometryBeamOut.model_validate(beam) for beam in geometry.beams],
     ).model_dump(mode="json")
 

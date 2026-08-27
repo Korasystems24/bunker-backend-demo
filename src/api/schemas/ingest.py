@@ -8,6 +8,8 @@ from src.domain.entities.telemetry_packet import TelemetryPacket
 
 
 class TelemetryRequest(pydantic.BaseModel):
+    """Пакеты как шлёт EdgePC: avg_level и Beam.height — миллиметры."""
+
     bunker_id: str
     packets: list[TelemetryPacket] = pydantic.Field(min_length=1)
 

@@ -8,6 +8,8 @@ from src.domain.value_objects.beam_reading import BeamReading
 
 
 class BuildupDetector(Protocol):
+    algorithm_version: str
+
     def detect(self, beams: Sequence[BeamReading]) -> list[AxisZone]:
         """Зоны налипания по лучам одного измерения (по зоне на каждую ось A..H)."""
         ...

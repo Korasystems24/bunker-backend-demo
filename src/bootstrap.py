@@ -4,8 +4,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from src.application.buildup.detector import RadialSlopeDeviationDetector
 from src.application.ingestion.service import IngestionService
 from src.application.query.service import QueryService
+from src.application.silence.monitor import SilenceMonitor
 from src.config.settings import Settings, get_settings
 from src.infrastructure.database.engine import create_engine, create_sessionmaker
 from src.infrastructure.database.repositories.bunker import SqlBunkerRepository
@@ -23,6 +25,7 @@ class Container:
     sessions: async_sessionmaker[AsyncSession]
     ingestion: IngestionService
     query: QueryService
+    silence: SilenceMonitor
 
 
 def build_container(settings: Settings | None = None) -> Container:
@@ -30,17 +33,30 @@ def build_container(settings: Settings | None = None) -> Container:
     engine = create_engine(settings.database)
     sessions = create_sessionmaker(engine)
 
+    health = SqlHealthRepository(sessions)
+    bunkers = SqlBunkerRepository(sessions)
+    detector = RadialSlopeDeviationDetector(
+        outer_position_threshold=settings.buildup.outer_position_threshold,
+        deviation_threshold_m=settings.buildup.deviation_threshold_m,
+    )
     ingestion = IngestionService(
         measurements=SqlMeasurementRepository(sessions),
         events=SqlEventRepository(sessions),
-        health=SqlHealthRepository(sessions),
+        health=health,
+        bunkers=bunkers,
+        buildup=detector,
     )
     query = QueryService(
         measurements=SqlMeasurementRepository(sessions),
-        bunkers=SqlBunkerRepository(sessions),
-        health=SqlHealthRepository(sessions),
+        bunkers=bunkers,
+        health=health,
         edge_stale_after_sec=settings.api.edge_stale_after_sec,
         buildup=settings.buildup,
+    )
+    silence = SilenceMonitor(
+        health=health,
+        stale_after_sec=settings.api.edge_stale_after_sec,
+        poll_interval_sec=settings.api.silence_poll_interval_sec,
     )
     return Container(
         settings=settings,
@@ -48,4 +64,5 @@ def build_container(settings: Settings | None = None) -> Container:
         sessions=sessions,
         ingestion=ingestion,
         query=query,
+        silence=silence,
     )

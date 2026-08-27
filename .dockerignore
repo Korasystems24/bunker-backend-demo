@@ -17,7 +17,6 @@ htmlcov
 # В образе не нужны:
 docs
 tests
-scripts
 .idea
 .vscode
 Dockerfile

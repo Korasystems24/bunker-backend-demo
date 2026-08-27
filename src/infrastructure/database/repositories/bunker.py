@@ -2,6 +2,7 @@
 
 Справочные таблицы — мир ORM; join со свежестью edge_nodes делается raw SQL,
 поскольку edge_nodes не имеет ORM-модели (телеметрия — raw-SQL мир).
+online в выдаче — по last_seen_at; status/alerts ведёт SilenceMonitor.
 """
 
 from sqlalchemy import text
@@ -11,6 +12,8 @@ from src.domain.entities.bunker import Bunker
 from src.domain.entities.geometry import Geometry
 from src.domain.ports.bunker_repository import BunkerRepository
 from src.infrastructure.database.models.reference import GeometryModel
+
+_EXISTS = text("SELECT EXISTS (SELECT 1 FROM bunkers WHERE id = :id)")
 
 _LIST_BUNKERS = text("""
     SELECT b.id,
@@ -26,6 +29,11 @@ _LIST_BUNKERS = text("""
 class SqlBunkerRepository(BunkerRepository):
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
+
+    async def exists(self, bunker_id: str) -> bool:
+        async with self._sessions() as session:
+            value = await session.scalar(_EXISTS, {"id": bunker_id})
+            return bool(value)
 
     async def list_bunkers(self, *, stale_after_seconds: int) -> list[Bunker]:
         async with self._sessions() as session:

@@ -8,11 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from src.domain.entities.edge_node_state import EdgeNodeState
 from src.domain.entities.health_snapshot import HealthSnapshot
 from src.domain.ports.health_repository import HealthRepository
-from src.infrastructure.database.repositories.nodes import node_id_for_bunker
+from src.infrastructure.database.repositories.nodes import (
+    node_id_for_bunker,
+    previous_status,
+    resolve_silence_if_offline,
+)
 
-# online вычисляется по свежести касания (dead-man read-side);
-# SilenceMonitor в шаге 4 формализует это фоновыми алертами.
-# cpu/ram/disk округляются до 1 знака — формат мока (REAL даёт шум float4).
+# online вычисляется по свежести касания (фронт не ждёт тик монитора);
+# SilenceMonitor параллельно ведёт status и таблицу alerts.
+# cpu/ram/disk округляются до 1 знака (REAL даёт шум float4).
 _LIST_STATES = text("""
     SELECT node_id,
            bunker_id,
@@ -24,6 +28,53 @@ _LIST_STATES = text("""
             AND last_seen_at >= now() - make_interval(secs => :stale)) AS online
     FROM edge_nodes
     ORDER BY node_id
+""")
+
+_MARK_SILENT = text("""
+    WITH silenced AS (
+        UPDATE edge_nodes
+        SET status = 'offline'
+        WHERE last_seen_at IS NOT NULL
+          AND last_seen_at < now() - make_interval(secs => :stale)
+          AND status IS DISTINCT FROM 'offline'
+        RETURNING node_id, last_seen_at
+    ),
+    inserted AS (
+        INSERT INTO alerts (node_id, type, last_seen_at)
+        SELECT silenced.node_id, 'silence_started', silenced.last_seen_at
+        FROM silenced
+        WHERE NOT EXISTS (
+            SELECT 1 FROM alerts a
+            WHERE a.node_id = silenced.node_id
+              AND a.type = 'silence_started'
+              AND a.resolved_at IS NULL
+        )
+        RETURNING node_id
+    )
+    SELECT node_id FROM silenced
+""")
+
+_RESOLVE_RECOVERED = text("""
+    WITH recovered AS (
+        SELECT DISTINCT n.node_id
+        FROM edge_nodes n
+        JOIN alerts a ON a.node_id = n.node_id
+            AND a.type = 'silence_started'
+            AND a.resolved_at IS NULL
+        WHERE n.status = 'online'
+    ),
+    closed AS (
+        UPDATE alerts
+        SET resolved_at = now()
+        FROM recovered
+        WHERE alerts.node_id = recovered.node_id
+          AND alerts.type = 'silence_started'
+          AND alerts.resolved_at IS NULL
+        RETURNING alerts.node_id
+    )
+    INSERT INTO alerts (node_id, type, last_seen_at)
+    SELECT node_id, 'silence_resolved', now() FROM closed
+    RETURNING node_id
 """)
 
 
@@ -61,11 +112,13 @@ class SqlHealthRepository(HealthRepository):
         workers_json = {
             name: worker.model_dump(mode="json") for name, worker in snapshot.workers.items()
         }
+        node_id = node_id_for_bunker(bunker_id)
         async with self._sessions() as session, session.begin():
+            prev = await previous_status(session, node_id)
             await session.execute(
                 self._UPSERT_NODE,
                 {
-                    "node_id": node_id_for_bunker(bunker_id),
+                    "node_id": node_id,
                     "bunker_id": bunker_id,
                     "cpu": snapshot.cpu_percent,
                     "ram": snapshot.memory_percent,
@@ -78,6 +131,7 @@ class SqlHealthRepository(HealthRepository):
                     "storage_paused": snapshot.storage_paused,
                 },
             )
+            await resolve_silence_if_offline(session, node_id, prev)
 
     async def list_states(self, *, stale_after_seconds: int) -> list[EdgeNodeState]:
         async with self._sessions() as session:
@@ -94,3 +148,13 @@ class SqlHealthRepository(HealthRepository):
                 )
                 for r in rows
             ]
+
+    async def mark_silent_nodes(self, *, stale_after_seconds: int) -> list[str]:
+        async with self._sessions() as session, session.begin():
+            rows = await session.execute(_MARK_SILENT, {"stale": stale_after_seconds})
+            return [str(r.node_id) for r in rows]
+
+    async def resolve_recovered_nodes(self) -> list[str]:
+        async with self._sessions() as session, session.begin():
+            rows = await session.execute(_RESOLVE_RECOVERED)
+            return [str(r.node_id) for r in rows]

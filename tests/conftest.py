@@ -52,6 +52,13 @@ async def clean_database(app: FastAPI) -> AsyncIterator[None]:
                 "edge_events, edge_nodes, alerts"
             )
         )
+        await conn.execute(
+            text(
+                "INSERT INTO bunkers (id, name) VALUES ('bunker-1', 'Бункер №1') "
+                "ON CONFLICT DO NOTHING"
+            )
+        )
+    await refresh_hourly_cagg(app)
     yield
 
 
@@ -66,6 +73,7 @@ async def clean_query_database(app: FastAPI) -> AsyncIterator[None]:
                 "edge_nodes, alerts, geometries, bunkers CASCADE"
             )
         )
+    await refresh_hourly_cagg(app)
     yield
 
 
@@ -73,3 +81,13 @@ def auth_headers(app: FastAPI) -> dict[str, str]:
     """Bearer-заголовок с дефолтным токеном из настроек (тесты не меняют .env)."""
     container: Container = app.state.container
     return {"Authorization": f"Bearer {container.settings.api.edge_auth_token}"}
+
+
+async def refresh_hourly_cagg(app: FastAPI) -> None:
+    """Синхронизирует measurements_hourly. CALL нельзя внутри транзакции."""
+    container: Container = app.state.container
+    connectable = container.engine.execution_options(isolation_level="AUTOCOMMIT")
+    async with connectable.connect() as conn:
+        await conn.execute(
+            text("CALL refresh_continuous_aggregate('measurements_hourly', NULL, now())")
+        )
