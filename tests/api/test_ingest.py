@@ -11,9 +11,6 @@ from tests.conftest import auth_headers, load_fixture
 if TYPE_CHECKING:
     from src.bootstrap import Container
 
-pytestmark = pytest.mark.usefixtures("clean_database")
-
-
 async def fetch_scalar(app: FastAPI, sql: str) -> object:
     container: Container = app.state.container
     async with container.engine.begin() as conn:
@@ -51,6 +48,7 @@ class TestAuth:
         assert response.status_code == 403
 
 
+@pytest.mark.usefixtures("clean_database")
 class TestTelemetry:
     async def test_valid_batch_persists(self, client: AsyncClient, app: FastAPI) -> None:
         fixture = load_fixture("telemetry-valid.json")
@@ -97,6 +95,7 @@ class TestTelemetry:
         headers = auth_headers(app)
         valid = load_fixture("telemetry-valid.json")
         duplicate = load_fixture("telemetry-duplicate.json")
+        duplicate["packets"][0]["ts"] = "2026-08-25T10:01:00Z"
 
         first = await client.post("/api/v1/telemetry", json=valid, headers=headers)
         second = await client.post("/api/v1/telemetry", json=duplicate, headers=headers)
@@ -106,6 +105,7 @@ class TestTelemetry:
         assert second.status_code == 200
         assert second.json()["duplicates"] == 1
         assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 1
+        assert await fetch_scalar(app, "SELECT count(*) FROM ingest_ledger") == 1
         assert await fetch_scalar(app, "SELECT count(*) FROM beam_readings") == 64
         assert await fetch_scalar(app, "SELECT count(*) FROM buildup_zones") == 8
 
@@ -160,12 +160,13 @@ class TestTelemetry:
         node_id, online = await fetch_row(
             app, "SELECT node_id, last_seen_at >= now() - interval '2 seconds' FROM edge_nodes"
         )
-        assert node_id == "edge-1"  # выводится из bunker_id ('bunker-1' → 'edge-1')
+        assert node_id == "bunker-1"
         assert online is True
 
 
+@pytest.mark.usefixtures("clean_database")
 class TestUnknownBunker:
-    async def test_unknown_bunker_rejected_422(self, client: AsyncClient, app: FastAPI) -> None:
+    async def test_unknown_bunker_is_registered(self, client: AsyncClient, app: FastAPI) -> None:
         fixture = load_fixture("telemetry-valid.json")
         fixture["bunker_id"] = "bunker-missing"
 
@@ -173,11 +174,21 @@ class TestUnknownBunker:
             "/api/v1/telemetry", json=fixture, headers=auth_headers(app)
         )
 
-        assert response.status_code == 422
-        assert response.json() == {"error": "Unknown bunker"}
-        assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 0
+        assert response.status_code == 200
+        assert await fetch_scalar(
+            app, "SELECT name FROM bunkers WHERE id = 'bunker-missing'"
+        ) == "bunker-missing"
+        assert await fetch_scalar(
+            app, "SELECT count(*) FROM geometries WHERE bunker_id = 'bunker-missing'"
+        ) == 1
+        assert await fetch_scalar(app, "SELECT count(*) FROM measurements") == 1
+
+        listed = await client.get("/api/v1/bunkers")
+        assert listed.status_code == 200
+        assert any(item["id"] == "bunker-missing" for item in listed.json())
 
 
+@pytest.mark.usefixtures("clean_database")
 class TestNoDataTelemetry:
     """Перебой питания лидара: лучи NotUsed, величины не посчитаны."""
 
@@ -202,6 +213,7 @@ class TestNoDataTelemetry:
         assert not_used_count == 64
 
 
+@pytest.mark.usefixtures("clean_database")
 class TestEvents:
     async def test_events_saved_and_deduplicated(self, client: AsyncClient, app: FastAPI) -> None:
         headers = auth_headers(app)
@@ -237,7 +249,7 @@ class TestEvents:
         node_id, online = await fetch_row(
             app, "SELECT node_id, last_seen_at >= now() - interval '2 seconds' FROM edge_nodes"
         )
-        assert node_id == "edge-1"
+        assert node_id == "bunker-1"
         assert online is True
 
     async def test_quarantined_payload_validated(self, client: AsyncClient, app: FastAPI) -> None:
@@ -277,6 +289,7 @@ class TestEvents:
         assert await fetch_scalar(app, "SELECT count(*) FROM edge_events") == 0
 
 
+@pytest.mark.usefixtures("clean_database")
 class TestHealth:
     async def test_health_upserts_edge_node(self, client: AsyncClient, app: FastAPI) -> None:
         # Справочник бункеров заполняется сидом/конфигуратором до старта edge.
@@ -295,9 +308,9 @@ class TestHealth:
         first = await client.post("/api/v1/health", json=fixture, headers=headers)
         assert first.status_code == 200
         assert first.json() == {"status": "ok"}
-        # node_id выводится из bunker_id (агент его не шлёт).
+        # Непрозрачный bunker_id служит идентичностью узла.
         node_id, cpu = await fetch_row(app, "SELECT node_id, cpu FROM edge_nodes")
-        assert node_id == "edge-1"
+        assert node_id == "bunker-1"
         assert cpu == pytest.approx(37.5)
         workers_json = await fetch_scalar(app, "SELECT workers::text FROM edge_nodes")
         assert isinstance(workers_json, str) and '"dispatch"' in workers_json

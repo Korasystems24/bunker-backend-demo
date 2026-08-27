@@ -33,7 +33,8 @@ services:
     environment:
       BUNKER_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-bunker}:${POSTGRES_PASSWORD:-bunker}@db:5432/${POSTGRES_DB:-bunker}
       BUNKER_API__EDGE_AUTH_TOKEN: ${BUNKER_API__EDGE_AUTH_TOKEN:?set BUNKER_API__EDGE_AUTH_TOKEN in .env}
-      BUNKER_LOGGING__JSON: "true"
+      BUNKER_ENVIRONMENT: production
+      BUNKER_LOGGING__JSON_LOGS: "true"
     ports:
       - "${API_PORT:-8000}:8000"
     healthcheck:

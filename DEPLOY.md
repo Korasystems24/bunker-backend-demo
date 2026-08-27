@@ -45,6 +45,7 @@ nano /opt/bunker-backend/.env
 POSTGRES_USER=bunker
 POSTGRES_PASSWORD=<сильный пароль>
 POSTGRES_DB=bunker
+BUNKER_ENVIRONMENT=production
 BUNKER_API__EDGE_AUTH_TOKEN=<тот же токен, что DISPATCH__HTTP__AUTH_TOKEN у EdgePC>
 BUNKER_API__CORS_ORIGINS=["http://<IP-или-домен-фронта>:5173"]
 ```
@@ -75,6 +76,12 @@ Repo → Settings → Secrets and variables → Actions:
 Пуш в `main` или Actions → Deploy → Run workflow.
 
 На сервере вручную: `cd /opt/bunker-backend && bash scripts/deploy.sh`.
+
+Deploy загружает `catalog/bunkers.json`: имена обновляются, существующая
+геометрия не перезаписывается. Её замена выполняется только вручную командой
+`docker compose exec -T api python scripts/seed_catalog.py --replace-geometry`.
+`bunker_id` EdgePC может быть любой непустой строкой длиной до 128 символов;
+backend не интерпретирует её формат.
 
 Проверка: `curl http://SERVER_IP:8000/readyz`.
 

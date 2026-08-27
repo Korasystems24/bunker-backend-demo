@@ -1,22 +1,15 @@
-"""Порт хранилища измерений: write-контур ингеста + read-контур Query API."""
+"""Read-порт временных рядов для Query API."""
 
-from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 
 from src.domain.entities.measurement import Measurement
-from src.domain.entities.telemetry_record import TelemetryRecord
 from src.domain.value_objects.beam_reading import BeamReading
 from src.domain.value_objects.buildup_snapshot import BuildupSnapshot
-from src.domain.value_objects.save_stats import SaveStats
 from src.domain.value_objects.stats_snapshot import StatsSnapshot
 
 
 class MeasurementRepository(Protocol):
-    async def save_batch(self, bunker_id: str, records: Sequence[TelemetryRecord]) -> SaveStats:
-        """Сохранить батч одной транзакцией; повторы гасятся как дубли."""
-        ...
-
     async def get_latest_with_beams(
         self, bunker_id: str
     ) -> tuple[Measurement, list[BeamReading]] | None:

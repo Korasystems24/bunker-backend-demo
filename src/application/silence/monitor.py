@@ -27,15 +27,12 @@ class SilenceMonitor:
         self._poll_interval_sec = poll_interval_sec
 
     async def tick(self) -> None:
-        """Один проход: замолчавшие → offline, очнувшиеся → закрыть алерт."""
+        """Один проход: замолчавшие → offline; ingest закрывает алерт при возврате."""
         silenced = await self._health.mark_silent_nodes(
             stale_after_seconds=self._stale_after_sec,
         )
         for node_id in silenced:
             loguru.logger.warning("SilenceMonitor: узел {} переведён в offline", node_id)
-        recovered = await self._health.resolve_recovered_nodes()
-        for node_id in recovered:
-            loguru.logger.info("SilenceMonitor: узел {} снова online, алерт закрыт", node_id)
 
     async def run(self) -> None:
         """Фоновый цикл. Первая пауза — чтобы тестовый lifespan не гонял тик

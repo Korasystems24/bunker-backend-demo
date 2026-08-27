@@ -16,9 +16,8 @@ build/
 .coverage.*
 htmlcov/
 
-# Секреты и локальная документация (в git — только .env.example)
+# Секреты
 .env
-docs/
 
 # Локальные оверрайды compose
 docker-compose.override.yml

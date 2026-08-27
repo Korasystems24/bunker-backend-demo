@@ -54,30 +54,6 @@ _MARK_SILENT = text("""
     SELECT node_id FROM silenced
 """)
 
-_RESOLVE_RECOVERED = text("""
-    WITH recovered AS (
-        SELECT DISTINCT n.node_id
-        FROM edge_nodes n
-        JOIN alerts a ON a.node_id = n.node_id
-            AND a.type = 'silence_started'
-            AND a.resolved_at IS NULL
-        WHERE n.status = 'online'
-    ),
-    closed AS (
-        UPDATE alerts
-        SET resolved_at = now()
-        FROM recovered
-        WHERE alerts.node_id = recovered.node_id
-          AND alerts.type = 'silence_started'
-          AND alerts.resolved_at IS NULL
-        RETURNING alerts.node_id
-    )
-    INSERT INTO alerts (node_id, type, last_seen_at)
-    SELECT node_id, 'silence_resolved', now() FROM closed
-    RETURNING node_id
-""")
-
-
 class SqlHealthRepository(HealthRepository):
     # cpu/ram/disk — колонки из схемы v1, в них пишутся *_percent агента.
     # ts агента сохраняется в edge_time (контроль drift часов узла).
@@ -107,31 +83,36 @@ class SqlHealthRepository(HealthRepository):
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
 
-    async def upsert(self, snapshot: HealthSnapshot, *, bunker_id: str) -> None:
+    async def upsert_in_session(
+        self,
+        session: AsyncSession,
+        snapshot: HealthSnapshot,
+        *,
+        bunker_id: str,
+    ) -> None:
         # status='online' при каждом касании; в offline переводит SilenceMonitor.
         workers_json = {
             name: worker.model_dump(mode="json") for name, worker in snapshot.workers.items()
         }
         node_id = node_id_for_bunker(bunker_id)
-        async with self._sessions() as session, session.begin():
-            prev = await previous_status(session, node_id)
-            await session.execute(
-                self._UPSERT_NODE,
-                {
-                    "node_id": node_id,
-                    "bunker_id": bunker_id,
-                    "cpu": snapshot.cpu_percent,
-                    "ram": snapshot.memory_percent,
-                    "disk": snapshot.disk_percent,
-                    "edge_time": snapshot.ts,
-                    "workers": json.dumps(workers_json),
-                    "pending_count": snapshot.pending_count,
-                    "quarantined_count": snapshot.quarantined_count,
-                    "free_bytes": snapshot.free_bytes,
-                    "storage_paused": snapshot.storage_paused,
-                },
-            )
-            await resolve_silence_if_offline(session, node_id, prev)
+        prev = await previous_status(session, node_id)
+        await session.execute(
+            self._UPSERT_NODE,
+            {
+                "node_id": node_id,
+                "bunker_id": bunker_id,
+                "cpu": snapshot.cpu_percent,
+                "ram": snapshot.memory_percent,
+                "disk": snapshot.disk_percent,
+                "edge_time": snapshot.ts,
+                "workers": json.dumps(workers_json),
+                "pending_count": snapshot.pending_count,
+                "quarantined_count": snapshot.quarantined_count,
+                "free_bytes": snapshot.free_bytes,
+                "storage_paused": snapshot.storage_paused,
+            },
+        )
+        await resolve_silence_if_offline(session, node_id, prev)
 
     async def list_states(self, *, stale_after_seconds: int) -> list[EdgeNodeState]:
         async with self._sessions() as session:
@@ -152,9 +133,4 @@ class SqlHealthRepository(HealthRepository):
     async def mark_silent_nodes(self, *, stale_after_seconds: int) -> list[str]:
         async with self._sessions() as session, session.begin():
             rows = await session.execute(_MARK_SILENT, {"stale": stale_after_seconds})
-            return [str(r.node_id) for r in rows]
-
-    async def resolve_recovered_nodes(self) -> list[str]:
-        async with self._sessions() as session, session.begin():
-            rows = await session.execute(_RESOLVE_RECOVERED)
             return [str(r.node_id) for r in rows]

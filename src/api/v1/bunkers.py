@@ -64,10 +64,12 @@ async def get_geometry(
     geometry = await container.query.get_geometry(bunker_id)
     payload = GeometryOut(
         bunker_id=geometry.bunker_id,
-        shape=geometry.shape,
-        sensor=geometry.sensor,
-        # Явная валидация dict → DTO: расхождение с контрактом = 500, не тишина.
-        beams=[GeometryBeamOut.model_validate(beam) for beam in geometry.beams],
+        shape=geometry.shape.model_dump(mode="json"),
+        sensor=geometry.sensor.model_dump(mode="json"),
+        beams=[
+            GeometryBeamOut.model_validate(beam.model_dump(mode="json"))
+            for beam in geometry.beams
+        ],
     ).model_dump(mode="json")
 
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)
@@ -103,7 +105,7 @@ async def list_measurements(
     container: ContainerDep,
     frm: Annotated[datetime | None, fastapi.Query(alias="from")] = None,
     to: Annotated[datetime | None, fastapi.Query()] = None,
-    limit: Annotated[int, fastapi.Query(ge=0)] = 50,
+    limit: Annotated[int, fastapi.Query(ge=1)] = 50,
     offset: Annotated[int, fastapi.Query(ge=0)] = 0,
 ) -> MeasurementsPageOut:
     """Список без beams: 500 записей × 64 луча — путь к лагам фронта (риск 7.1)."""

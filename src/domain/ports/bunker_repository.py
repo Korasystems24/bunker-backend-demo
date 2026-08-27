@@ -12,9 +12,9 @@ class BunkerRepository(Protocol):
         ...
 
     async def exists(self, bunker_id: str) -> bool:
-        """Есть ли бункер в справочнике (проверка ingest-пути)."""
+        """Есть ли бункер в справочнике."""
         ...
 
     async def get_geometry(self, bunker_id: str) -> Geometry | None:
-        """Геометрия из справочника (заливается конфигуратором)."""
+        """Геометрия из справочника."""
         ...

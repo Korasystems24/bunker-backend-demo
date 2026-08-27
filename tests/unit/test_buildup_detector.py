@@ -2,7 +2,9 @@
 
 import pytest
 from src.application.buildup.detector import RadialSlopeDeviationDetector
-from src.domain.value_objects.beam_reading import BeamReading
+from src.domain.beam_rules import AXES, POSITIONS_PER_AXIS
+from src.domain.value_objects.beam import Beam
+from src.domain.value_objects.beam_status import BeamStatus
 
 THRESHOLD = 0.35
 
@@ -13,13 +15,27 @@ def make_detector() -> RadialSlopeDeviationDetector:
     )
 
 
-def beam(name: str, height: float, status: str = "") -> BeamReading:
-    return BeamReading(beam_name=name, height=height, status=status)
+def empty_beams() -> list[Beam]:
+    return [Beam(height=None, raw_status=None, status=()) for _ in range(64)]
 
 
-def flat_axis(axis: str) -> list[BeamReading]:
+def set_beam(
+    beams: list[Beam],
+    axis: str,
+    position: int,
+    height: float,
+    *statuses: BeamStatus,
+) -> None:
+    index = AXES.index(axis) * POSITIONS_PER_AXIS + position - 1
+    beams[index] = Beam(height=height, raw_status=None, status=statuses)
+
+
+def flat_axis(axis: str) -> list[Beam]:
     """Ровный склон без аномалии: высота 2.0 на всех позициях."""
-    return [beam(f"{axis}{p}", 2.0) for p in range(1, 9)]
+    beams = empty_beams()
+    for position in range(1, 9):
+        set_beam(beams, axis, position, 2.0)
+    return beams
 
 
 class TestDetect:
@@ -34,8 +50,11 @@ class TestDetect:
 
     def test_outer_bump_is_detected(self) -> None:
         # Внутренние позиции задают уклон ~ -0.1/шаг; внешние подняты на +1.0 м.
-        beams = [beam(f"C{p}", 3.0 - 0.1 * (p - 1)) for p in range(1, 6)]
-        beams += [beam(f"C{p}", 3.0 - 0.1 * (p - 1) + 1.0) for p in range(6, 9)]
+        beams = empty_beams()
+        for position in range(1, 6):
+            set_beam(beams, "C", position, 3.0 - 0.1 * (position - 1))
+        for position in range(6, 9):
+            set_beam(beams, "C", position, 3.0 - 0.1 * (position - 1) + 1.0)
 
         zone = {z.axis: z for z in make_detector().detect(beams)}["C"]
 
@@ -46,8 +65,11 @@ class TestDetect:
 
     def test_small_deviation_below_threshold_is_ignored(self) -> None:
         # Внешние выше склона на 0.2 < порога 0.35 — зоны нет.
-        beams = [beam(f"B{p}", 2.5 - 0.05 * (p - 1)) for p in range(1, 6)]
-        beams += [beam(f"B{p}", 2.5 - 0.05 * (p - 1) + 0.2) for p in range(6, 9)]
+        beams = empty_beams()
+        for position in range(1, 6):
+            set_beam(beams, "B", position, 2.5 - 0.05 * (position - 1))
+        for position in range(6, 9):
+            set_beam(beams, "B", position, 2.5 - 0.05 * (position - 1) + 0.2)
 
         zone = {z.axis: z for z in make_detector().detect(beams)}["B"]
 
@@ -57,11 +79,8 @@ class TestDetect:
 
     def test_hard_unreliable_beams_excluded(self) -> None:
         beams = flat_axis("D")
-        beams += [
-            beam("D9", 99.0),  # не существует по маске — игнорируется regex'ом
-            beam("E1", 50.0, "Disabled"),  # чужая ось не попадает в зону D
-            beam("D1", 50.0, "NotUsed"),  # ненадёжный луч D1 выбрасывается из fit
-        ]
+        set_beam(beams, "E", 1, 50.0, BeamStatus.DISABLED)
+        set_beam(beams, "D", 1, 50.0, BeamStatus.NOT_USED)
 
         zones = {z.axis: z for z in make_detector().detect(beams)}
 
@@ -69,7 +88,10 @@ class TestDetect:
         assert all(z.severity == "none" for axis, z in zones.items() if axis != "D")
 
     def test_all_eight_axes_always_reported(self) -> None:
-        beams = [beam(f"{axis}{p}", 2.0) for axis in "ABCDEFGH" for p in range(1, 9)]
+        beams = empty_beams()
+        for axis in AXES:
+            for position in range(1, 9):
+                set_beam(beams, axis, position, 2.0)
 
         zones = make_detector().detect(beams)
 
@@ -78,7 +100,10 @@ class TestDetect:
 
     def test_too_few_inner_positions_gives_none(self) -> None:
         # Только один надёжный внутренний луч → регрессия невозможна.
-        beams = [beam("A1", 2.0), beam("A6", 2.0), beam("A7", 5.0)]
+        beams = empty_beams()
+        set_beam(beams, "A", 1, 2.0)
+        set_beam(beams, "A", 6, 2.0)
+        set_beam(beams, "A", 7, 5.0)
 
         zone = make_detector().detect(beams)[0]
 

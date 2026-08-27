@@ -7,6 +7,7 @@
 import fastapi
 
 from src.api.deps import ContainerDep, require_edge_token
+from src.api.mappers.ingest import event_to_domain, health_to_domain, telemetry_packet_to_domain
 from src.api.schemas.ingest import (
     EventsRequest,
     HealthAccepted,
@@ -24,7 +25,10 @@ router = fastapi.APIRouter(
 
 @router.post("/telemetry")
 async def post_telemetry(payload: TelemetryRequest, container: ContainerDep) -> IngestAccepted:
-    stats = await container.ingestion.ingest_telemetry(payload.bunker_id, payload.packets)
+    stats = await container.ingestion.ingest_telemetry(
+        payload.bunker_id,
+        [telemetry_packet_to_domain(packet) for packet in payload.packets],
+    )
     return IngestAccepted(
         received=stats.received,
         inserted=stats.inserted,
@@ -34,7 +38,10 @@ async def post_telemetry(payload: TelemetryRequest, container: ContainerDep) -> 
 
 @router.post("/events")
 async def post_events(payload: EventsRequest, container: ContainerDep) -> IngestAccepted:
-    stats = await container.ingestion.ingest_events(payload.bunker_id, payload.events)
+    stats = await container.ingestion.ingest_events(
+        payload.bunker_id,
+        [event_to_domain(event) for event in payload.events],
+    )
     return IngestAccepted(
         received=stats.received,
         inserted=stats.inserted,
@@ -44,5 +51,5 @@ async def post_events(payload: EventsRequest, container: ContainerDep) -> Ingest
 
 @router.post("/health")
 async def post_health(payload: HealthRequest, container: ContainerDep) -> HealthAccepted:
-    await container.ingestion.ingest_health(payload.bunker_id, payload)
+    await container.ingestion.ingest_health(payload.bunker_id, health_to_domain(payload))
     return HealthAccepted()

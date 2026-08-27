@@ -26,10 +26,3 @@ class MeasurementsNotFoundError(NotFoundError):
 class NoDataNotFoundError(NotFoundError):
     def __init__(self) -> None:
         super().__init__("No data")
-
-
-class UnknownBunkerError(DomainError):
-    """Edge прислал bunker_id, которого нет в справочнике (ingest → 422)."""
-
-    def __init__(self) -> None:
-        super().__init__("Unknown bunker")

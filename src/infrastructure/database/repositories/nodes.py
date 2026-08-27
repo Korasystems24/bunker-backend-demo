@@ -1,15 +1,12 @@
-"""Общая логика таблицы edge_nodes: вывод node_id и касание last_seen_at.
-
-EdgePC не шлёт node_id — один агент на бункер, идентичность узла
-выводится из bunker_id: 'bunker-1' -> 'edge-1'.
-"""
+"""Общая логика edge_nodes: непрозрачная идентичность и last_seen_at."""
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def node_id_for_bunker(bunker_id: str) -> str:
-    return f"edge-{bunker_id.rsplit('-', 1)[-1]}"
+    """Не интерпретировать внешний id: один edge-узел идентифицируется bunker_id."""
+    return bunker_id
 
 
 # Касание телеметрией/событиями продлевает жизнь узлу (dead-man).

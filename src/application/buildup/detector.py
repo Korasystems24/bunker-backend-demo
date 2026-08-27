@@ -9,15 +9,11 @@
 Чистая функция O(64) — вызывается на ингесте; GET /buildup читает таблицу.
 """
 
-import re
 from collections.abc import Sequence
 
-from src.domain.constants import HARD_UNRELIABLE_BEAM_FLAGS
+from src.domain.beam_rules import AXES, beam_coordinates, is_hard_unreliable
 from src.domain.value_objects.axis_zone import AxisZone, Severity
-from src.domain.value_objects.beam_reading import BeamReading
-
-_BEAM_NAME_RE = re.compile(r"^([A-H])([1-8])$")
-_AXES = tuple("ABCDEFGH")
+from src.domain.value_objects.beam import Beam
 
 
 class RadialSlopeDeviationDetector:
@@ -32,17 +28,17 @@ class RadialSlopeDeviationDetector:
         self._threshold = deviation_threshold_m
         self.algorithm_version = algorithm_version
 
-    def detect(self, beams: Sequence[BeamReading]) -> list[AxisZone]:
-        by_axis: dict[str, list[tuple[int, float]]] = {axis: [] for axis in _AXES}
-        for beam in beams:
-            match = _BEAM_NAME_RE.match(beam.beam_name)
-            if match is None or self._is_hard_unreliable(beam.status):
+    def detect(self, beams: Sequence[Beam]) -> list[AxisZone]:
+        by_axis: dict[str, list[tuple[int, float]]] = {axis: [] for axis in AXES}
+        for index, beam in enumerate(beams):
+            if is_hard_unreliable(beam.status):
                 continue
             if beam.height is None:
                 continue
-            by_axis[match.group(1)].append((int(match.group(2)), beam.height))
+            axis, position = beam_coordinates(index)
+            by_axis[axis].append((position, beam.height))
 
-        return [self._detect_axis(axis, by_axis[axis]) for axis in _AXES]
+        return [self._detect_axis(axis, by_axis[axis]) for axis in AXES]
 
     def _detect_axis(self, axis: str, points: list[tuple[int, float]]) -> AxisZone:
         inner = [(p, h) for p, h in points if p < self._outer_from]
@@ -80,12 +76,6 @@ class RadialSlopeDeviationDetector:
         if max_deviation > self._threshold:
             return "low"
         return "none"
-
-    @staticmethod
-    def _is_hard_unreliable(status: str) -> bool:
-        flags: set[str] = {flag.strip() for flag in status.split(",")} if status else set()
-        return bool(flags & HARD_UNRELIABLE_BEAM_FLAGS)
-
 
 def _linear_fit(points: list[tuple[int, float]]) -> tuple[float, float]:
     """МНК-прямая height(position); при вырожденном знаменателе — горизонталь."""

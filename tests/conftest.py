@@ -49,7 +49,7 @@ async def clean_database(app: FastAPI) -> AsyncIterator[None]:
         await conn.execute(
             text(
                 "TRUNCATE measurements, beam_readings, buildup_zones, "
-                "edge_events, edge_nodes, alerts"
+                "edge_events, ingest_ledger, edge_nodes, alerts"
             )
         )
         await conn.execute(
@@ -70,7 +70,7 @@ async def clean_query_database(app: FastAPI) -> AsyncIterator[None]:
         await conn.execute(
             text(
                 "TRUNCATE measurements, beam_readings, buildup_zones, edge_events, "
-                "edge_nodes, alerts, geometries, bunkers CASCADE"
+                "ingest_ledger, edge_nodes, alerts, geometries, bunkers CASCADE"
             )
         )
     await refresh_hourly_cagg(app)

@@ -89,7 +89,7 @@ class AxisZoneOut(pydantic.BaseModel):
     severity: str
     score: float
     deviation_m: float
-    affected_positions: list[int] = []
+    affected_positions: list[int] = pydantic.Field(default_factory=list)
 
 
 class BuildupOut(pydantic.BaseModel):

@@ -34,12 +34,12 @@ class TestSilenceMonitor:
 
         await app.state.container.silence.tick()
 
-        status = await fetch_scalar(app, "SELECT status FROM edge_nodes WHERE node_id = 'edge-1'")
+        status = await fetch_scalar(app, "SELECT status FROM edge_nodes WHERE node_id = 'bunker-1'")
         assert status == "offline"
         open_alerts = await fetch_scalar(
             app,
             "SELECT count(*) FROM alerts "
-            "WHERE node_id = 'edge-1' AND type = 'silence_started' AND resolved_at IS NULL",
+            "WHERE node_id = 'bunker-1' AND type = 'silence_started' AND resolved_at IS NULL",
         )
         assert open_alerts == 1
 
@@ -47,17 +47,17 @@ class TestSilenceMonitor:
         recovered = await client.post("/api/v1/health", json=health, headers=auth_headers(app))
         assert recovered.status_code == 200
 
-        status = await fetch_scalar(app, "SELECT status FROM edge_nodes WHERE node_id = 'edge-1'")
+        status = await fetch_scalar(app, "SELECT status FROM edge_nodes WHERE node_id = 'bunker-1'")
         assert status == "online"
         still_open = await fetch_scalar(
             app,
             "SELECT count(*) FROM alerts "
-            "WHERE node_id = 'edge-1' AND type = 'silence_started' AND resolved_at IS NULL",
+            "WHERE node_id = 'bunker-1' AND type = 'silence_started' AND resolved_at IS NULL",
         )
         assert still_open == 0
         resolved_events = await fetch_scalar(
             app,
-            "SELECT count(*) FROM alerts WHERE node_id = 'edge-1' AND type = 'silence_resolved'",
+            "SELECT count(*) FROM alerts WHERE node_id = 'bunker-1' AND type = 'silence_resolved'",
         )
         assert resolved_events == 1
 
@@ -74,13 +74,13 @@ class TestSilenceMonitor:
             await conn.execute(
                 text(
                     "INSERT INTO edge_nodes (node_id, bunker_id, status) "
-                    "VALUES ('edge-1', 'bunker-1', 'unknown')"
+                    "VALUES ('bunker-1', 'bunker-1', 'unknown')"
                 )
             )
 
         await app.state.container.silence.tick()
 
-        status = await fetch_scalar(app, "SELECT status FROM edge_nodes WHERE node_id = 'edge-1'")
+        status = await fetch_scalar(app, "SELECT status FROM edge_nodes WHERE node_id = 'bunker-1'")
         assert status == "unknown"
         alerts = await fetch_scalar(app, "SELECT count(*) FROM alerts")
         assert alerts == 0

@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "default_geometry": {
+    "shape": {
+      "type": "truncated_cone",
+      "top_diameter_m": 7.0,
+      "bottom_diameter_m": 4.2,
+      "height_m": 8.0
+    },
+    "sensor": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 8.5,
+      "tilt_deg": 0.0
+    },
+    "beam_layout": {
+      "axes": [
+        {"name": "A", "azimuth_deg": 0},
+        {"name": "B", "azimuth_deg": 45},
+        {"name": "C", "azimuth_deg": 90},
+        {"name": "D", "azimuth_deg": 135},
+        {"name": "E", "azimuth_deg": 180},
+        {"name": "F", "azimuth_deg": 225},
+        {"name": "G", "azimuth_deg": 270},
+        {"name": "H", "azimuth_deg": 315}
+      ],
+      "positions": [
+        {"number": 1, "radius_fraction": 0.10},
+        {"number": 2, "radius_fraction": 0.22},
+        {"number": 3, "radius_fraction": 0.34},
+        {"number": 4, "radius_fraction": 0.46},
+        {"number": 5, "radius_fraction": 0.58},
+        {"number": 6, "radius_fraction": 0.70},
+        {"number": 7, "radius_fraction": 0.82},
+        {"number": 8, "radius_fraction": 0.95}
+      ],
+      "z_m": 0.0
+    }
+  },
+  "bunkers": [
+    {"id": "bunker-1", "name": "Бункер №1"},
+    {"id": "bunker-2", "name": "Бункер №2"}
+  ]
+}

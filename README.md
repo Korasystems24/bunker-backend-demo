@@ -21,8 +21,9 @@ src/
 │   └── v1/                  # ingest + query
 ├── application/             # ingestion, query, buildup, silence
 ├── domain/
-└── infrastructure/database/
-scripts/seed_catalog.py      # справочник bunkers + geometries
+└── infrastructure/          # JSON-каталог и database adapters
+catalog/bunkers.json         # versioned имена и шаблон геометрии
+scripts/seed_catalog.py      # безопасная загрузка каталога
 alembic/versions/
 docker/
 ```
@@ -52,7 +53,8 @@ Postgres снаружи слушает только `127.0.0.1`. API — пор�
 
 ## Конфигурация
 
-Переменные `BUNKER_*`, вложенность через `__`, см. `.env.example`.
+Переменные `BUNKER_*`, вложенность через `__`, см. `.env.example`. Геометрия
+и стартовые имена находятся в `catalog/bunkers.json`, а не в Python-коде.
 
 ## Query API
 
@@ -78,12 +80,20 @@ GET /api/v1/health
 | `DISPATCH__HTTP__AUTH_TOKEN` | = `BUNKER_API__EDGE_AUTH_TOKEN` |
 
 `POST /telemetry`, `/events`, `/health` с `Authorization: Bearer`. `200` — успех
-включая дубль; `401`/`403` — токен; `422` — батч целиком (в том числе неизвестный
-`bunker_id`); `5xx` — ретрай. Уровни и высоты лучей приходят в миллиметрах,
-в хранилище и Query API — метры. `node_id` агент не шлёт (`bunker-1` → `edge-1`).
+включая дубль; неизвестный непустой `bunker_id` создаётся сам (имя = id,
+геометрия из versioned default template). Backend считает идентификатор
+непрозрачной строкой и не разбирает префиксы или суффиксы; в health-ответе
+`node_id` равен `bunker_id`. `401`/`403` — токен; `422` — батч целиком;
+`5xx` — ретрай. Уровни и высоты лучей приходят в миллиметрах, в домене,
+хранилище и Query API — метры. Дедуп telemetry выполняется по
+`(bunker_id, event_id)` независимо от `ts`.
 
-Справочник бункеров обязан существовать до первого пакета:
+Человекочитаемые имена заранее:
 
 ```bash
 uv run python scripts/seed_catalog.py
 ```
+
+Команда обновляет имена, но не перезаписывает существующую геометрию. Для
+осознанной замены используйте `--replace-geometry`; другой файл задаётся через
+`--catalog path/to/catalog.json`.

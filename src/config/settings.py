@@ -5,6 +5,8 @@
 """
 
 from functools import lru_cache
+from pathlib import Path
+from typing import Literal, Self
 
 import pydantic
 import pydantic_settings
@@ -31,6 +33,7 @@ class ApiSettings(pydantic.BaseModel):
     # Порог тишины узла: нет telemetry/events/health дольше этого — offline.
     edge_stale_after_sec: int = 300
     silence_poll_interval_sec: int = 30
+    edge_clock_drift_warn_sec: int = 60
 
 
 class BuildupSettings(pydantic.BaseModel):
@@ -38,6 +41,10 @@ class BuildupSettings(pydantic.BaseModel):
 
     outer_position_threshold: int = 6
     deviation_threshold_m: float = 0.35
+
+
+class CatalogSettings(pydantic.BaseModel):
+    path: Path = Path("catalog/bunkers.json")
 
 
 class LoggingSettings(pydantic.BaseModel):
@@ -55,9 +62,17 @@ class Settings(pydantic_settings.BaseSettings):
     )
 
     database: DatabaseSettings = pydantic.Field(default_factory=DatabaseSettings)
+    environment: Literal["development", "test", "production"] = "development"
     api: ApiSettings = pydantic.Field(default_factory=ApiSettings)
     buildup: BuildupSettings = pydantic.Field(default_factory=BuildupSettings)
+    catalog: CatalogSettings = pydantic.Field(default_factory=CatalogSettings)
     logging: LoggingSettings = pydantic.Field(default_factory=LoggingSettings)
+
+    @pydantic.model_validator(mode="after")
+    def reject_default_production_token(self) -> Self:
+        if self.environment == "production" and self.api.edge_auth_token == "change-me-edge-token":
+            raise ValueError("production requires an explicit BUNKER_API__EDGE_AUTH_TOKEN")
+        return self
 
 
 @lru_cache

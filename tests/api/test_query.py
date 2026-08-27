@@ -59,7 +59,7 @@ async def seed_bunkers(app: FastAPI) -> None:
     )
 
 
-async def seed_online_node(app: FastAPI, *, node_id: str = "edge-1", age_sec: int = 10) -> None:
+async def seed_online_node(app: FastAPI, *, node_id: str = "bunker-1", age_sec: int = 10) -> None:
     await run_sql(
         app,
         """
@@ -346,7 +346,7 @@ class TestEdgeHealth:
 
         assert response.status_code == 200
         (pc,) = response.json()["edge_pcs"]
-        assert pc["node_id"] == "edge-1"
+        assert pc["node_id"] == "bunker-1"
         assert pc["online"] is True
         assert pc["last_pulse"] is not None
         assert pc["cpu"] == pytest.approx(37.5)

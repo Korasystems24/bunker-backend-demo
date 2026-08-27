@@ -6,7 +6,6 @@ beams отдаются только в /latest, limit жёстко ограни�
 
 from datetime import UTC, datetime, timedelta
 
-from src.config.settings import BuildupSettings
 from src.domain.entities.bunker import Bunker
 from src.domain.entities.edge_node_state import EdgeNodeState
 from src.domain.entities.geometry import Geometry
@@ -42,14 +41,13 @@ class QueryService:
         health: HealthRepository,
         *,
         edge_stale_after_sec: int,
-        buildup: BuildupSettings | None = None,
+        buildup_threshold_m: float,
     ) -> None:
         self._measurements = measurements
         self._bunkers = bunkers
         self._health = health
         self._edge_stale_after_sec = edge_stale_after_sec
-        buildup = buildup or BuildupSettings()
-        self._deviation_threshold_m = buildup.deviation_threshold_m
+        self._deviation_threshold_m = buildup_threshold_m
 
     async def list_bunkers(self) -> list[Bunker]:
         return await self._bunkers.list_bunkers(

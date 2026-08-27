@@ -7,15 +7,19 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.domain.entities.edge_event import EdgeEvent
-from src.domain.ports.event_repository import EventRepository
-from src.domain.value_objects.save_stats import SaveStats
 from src.infrastructure.database.repositories.nodes import touch_node
 
 
-class SqlEventRepository(EventRepository):
-    _INSERT_EVENT = text("""
+class SqlEventRepository:
+    _INSERT_EVENTS = text("""
         INSERT INTO edge_events (bunker_id, event_id, ts, type, payload)
-        VALUES (:bunker_id, :event_id, :ts, :type, CAST(:payload AS jsonb))
+        SELECT :bunker_id, item.event_id, item.ts, item.type, item.payload
+        FROM jsonb_to_recordset(CAST(:events AS jsonb)) AS item(
+            event_id uuid,
+            ts timestamptz,
+            type text,
+            payload jsonb
+        )
         ON CONFLICT DO NOTHING
         RETURNING event_id
     """)
@@ -23,28 +27,30 @@ class SqlEventRepository(EventRepository):
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
 
-    async def save_batch(self, bunker_id: str, events: Sequence[EdgeEvent]) -> SaveStats:
+    async def save_batch_in_session(
+        self,
+        session: AsyncSession,
+        bunker_id: str,
+        events: Sequence[EdgeEvent],
+    ) -> int:
+        serialized = [
+            {
+                "event_id": str(event.event_id),
+                "ts": event.ts.isoformat(),
+                "type": event.type,
+                "payload": event.payload.model_dump(mode="json"),
+            }
+            for event in events
+        ]
         inserted = 0
-
-        async with self._sessions() as session, session.begin():
-            for event in events:
-                result = await session.execute(
-                    self._INSERT_EVENT,
-                    {
-                        "bunker_id": bunker_id,
-                        "event_id": str(event.event_id),
-                        "ts": event.ts,
-                        "type": event.type,
-                        "payload": json.dumps(event.payload.model_dump(mode="json")),
-                    },
-                )
-                if result.scalar() is not None:
-                    inserted += 1
-            # Касание событий продлевает жизнь узлу (dead-man, блок F плана).
-            await touch_node(session, bunker_id)
-
-        return SaveStats(
-            received=len(events),
-            inserted=inserted,
-            duplicates=len(events) - inserted,
-        )
+        if serialized:
+            rows = await session.execute(
+                self._INSERT_EVENTS,
+                {
+                    "bunker_id": bunker_id,
+                    "events": json.dumps(serialized),
+                },
+            )
+            inserted = len(rows.all())
+        await touch_node(session, bunker_id)
+        return inserted

@@ -9,7 +9,9 @@ from src.application.ingestion.service import IngestionService
 from src.application.query.service import QueryService
 from src.application.silence.monitor import SilenceMonitor
 from src.config.settings import Settings, get_settings
+from src.infrastructure.catalog import JsonCatalogProvider
 from src.infrastructure.database.engine import create_engine, create_sessionmaker
+from src.infrastructure.database.ingestion_uow import SqlIngestionUnitOfWork
 from src.infrastructure.database.repositories.bunker import SqlBunkerRepository
 from src.infrastructure.database.repositories.event import SqlEventRepository
 from src.infrastructure.database.repositories.health import SqlHealthRepository
@@ -32,26 +34,33 @@ def build_container(settings: Settings | None = None) -> Container:
     settings = settings or get_settings()
     engine = create_engine(settings.database)
     sessions = create_sessionmaker(engine)
+    catalog = JsonCatalogProvider(settings.catalog.path)
 
     health = SqlHealthRepository(sessions)
-    bunkers = SqlBunkerRepository(sessions)
+    bunkers = SqlBunkerRepository(sessions, catalog)
+    measurements = SqlMeasurementRepository(sessions)
+    events = SqlEventRepository(sessions)
     detector = RadialSlopeDeviationDetector(
         outer_position_threshold=settings.buildup.outer_position_threshold,
         deviation_threshold_m=settings.buildup.deviation_threshold_m,
     )
     ingestion = IngestionService(
-        measurements=SqlMeasurementRepository(sessions),
-        events=SqlEventRepository(sessions),
-        health=health,
-        bunkers=bunkers,
+        uow=SqlIngestionUnitOfWork(
+            sessions,
+            bunkers=bunkers,
+            measurements=measurements,
+            events=events,
+            health=health,
+        ),
         buildup=detector,
+        clock_drift_warn_sec=settings.api.edge_clock_drift_warn_sec,
     )
     query = QueryService(
-        measurements=SqlMeasurementRepository(sessions),
+        measurements=measurements,
         bunkers=bunkers,
         health=health,
         edge_stale_after_sec=settings.api.edge_stale_after_sec,
-        buildup=settings.buildup,
+        buildup_threshold_m=settings.buildup.deviation_threshold_m,
     )
     silence = SilenceMonitor(
         health=health,
