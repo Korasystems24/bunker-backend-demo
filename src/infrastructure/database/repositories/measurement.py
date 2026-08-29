@@ -34,7 +34,7 @@ _SELECT_MEASUREMENT_COLS = """
 """
 
 # Continuous aggregate: серия — часовые бакеты; overall min/max/avg —
-# по сырым avg_level (min_avg_level / max_avg_level / sum/count).
+# по сырым avg_level периода. Ноль — сбой радара, в экстремумы/среднее не входит.
 _CAGG_STATS_SQL = """
 WITH src AS (
     SELECT bucket,
@@ -42,22 +42,26 @@ WITH src AS (
            min_level,
            max_level,
            mass,
-           volume,
-           min_avg_level,
-           max_avg_level,
-           sample_count,
-           sum_avg_level
+           volume
     FROM measurements_hourly
     WHERE bunker_id = :bunker_id AND bucket >= :frm
 ),
 overall AS (
-    SELECT round(min(min_avg_level)::numeric, 4)::double precision AS overall_min,
-           round(max(max_avg_level)::numeric, 4)::double precision AS overall_max,
+    SELECT round(
+               (min(avg_level) FILTER (WHERE avg_level > 0))::numeric, 4
+           )::double precision AS overall_min,
            round(
-               (sum(sum_avg_level) / nullif(sum(sample_count), 0))::numeric,
+               (max(avg_level) FILTER (WHERE avg_level > 0))::numeric, 4
+           )::double precision AS overall_max,
+           round(
+               (
+                   sum(avg_level) FILTER (WHERE avg_level > 0)
+                   / nullif(count(avg_level) FILTER (WHERE avg_level > 0), 0)
+               )::numeric,
                4
            )::double precision AS overall_avg
-    FROM src
+    FROM measurements
+    WHERE bunker_id = :bunker_id AND ts >= :frm
 )
 SELECT src.bucket AS ts,
        round(src.avg_level::numeric, 4)::double precision AS avg_level,

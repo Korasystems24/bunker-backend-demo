@@ -7,7 +7,7 @@ from src.domain.value_objects.series_point import SeriesPoint
 
 class StatsSnapshot(pydantic.BaseModel):
     """Общие min/max/avg считаются по avg_level сырых измерений периода,
-    а не по бакетам серии.
+    а не по бакетам серии. Нулевые avg_level (сбой радара) в расчёт не входят.
     """
 
     model_config = pydantic.ConfigDict(frozen=True)

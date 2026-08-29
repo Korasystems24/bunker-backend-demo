@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 import loguru
 
-from src.application.ingestion.levels import compute_min_max_levels
+from src.application.ingestion.levels import compute_min_max_levels, sanitize_avg_level
 from src.domain.entities.edge_event import EdgeEvent
 from src.domain.entities.health_snapshot import HealthSnapshot
 from src.domain.entities.measurement import Measurement
@@ -45,7 +45,7 @@ class IngestionService:
                 measurement = Measurement(
                     event_id=packet.event_id,
                     ts=packet.ts,
-                    avg_level=packet.avg_level,
+                    avg_level=sanitize_avg_level(packet.avg_level),
                     min_level=min_level,
                     max_level=max_level,
                     volume=packet.volume,

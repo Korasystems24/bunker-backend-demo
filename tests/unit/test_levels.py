@@ -1,6 +1,6 @@
 """Юнит-тест чистой функции min/max по достоверным лучам (без БД)."""
 
-from src.application.ingestion.levels import compute_min_max_levels
+from src.application.ingestion.levels import compute_min_max_levels, sanitize_avg_level
 from src.domain.value_objects.beam import Beam
 from src.domain.value_objects.beam_status import BeamStatus
 
@@ -21,6 +21,25 @@ def test_min_max_ignores_hard_flags_and_missing_heights() -> None:
     ]
 
     assert compute_min_max_levels(beams) == (1.0, 1.0)
+
+
+def test_zero_height_is_not_a_level() -> None:
+    """height=0 — нет эха, даже при мягком флаге вроде OutOfReposeAngle."""
+    beams = [
+        _beam(0.0, BeamStatus.OUT_OF_REPOSE_ANGLE),
+        _beam(0.0),
+        _beam(1.7),
+        _beam(2.2),
+    ]
+
+    assert compute_min_max_levels(beams) == (1.7, 2.2)
+
+
+def test_sanitize_avg_level_drops_zero() -> None:
+    assert sanitize_avg_level(None) is None
+    assert sanitize_avg_level(0.0) is None
+    assert sanitize_avg_level(-0.1) is None
+    assert sanitize_avg_level(1.96) == 1.96
 
 
 def test_soft_flags_do_not_exclude_beam() -> None:

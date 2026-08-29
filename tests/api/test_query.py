@@ -290,6 +290,24 @@ class TestStats:
             for key in ("min_level", "max_level", "mass", "volume"):
                 assert key in point
 
+    async def test_zero_avg_level_excluded_from_period_stats(
+        self, client: AsyncClient, app: FastAPI
+    ) -> None:
+        await seed_bunkers(app)
+        anchor = (datetime.now(UTC) - timedelta(hours=2)).replace(minute=17, second=0)
+        await insert_measurement(app, "bunker-1", anchor, avg_level=1.0)
+        await insert_measurement(app, "bunker-1", anchor + timedelta(minutes=10), avg_level=0.0)
+        await insert_measurement(app, "bunker-1", anchor + timedelta(minutes=20), avg_level=3.0)
+        await insert_measurement(app, "bunker-1", anchor + timedelta(hours=1), avg_level=5.0)
+        await refresh_hourly_cagg(app)
+
+        response = await client.get("/api/v1/bunkers/bunker-1/stats", params={"period": "day"})
+
+        body = response.json()
+        assert body["min_level"] == pytest.approx(1.0)
+        assert body["max_level"] == pytest.approx(5.0)
+        assert body["avg_level"] == pytest.approx(3.0)
+
     async def test_periods_change_bucket_size(self, client: AsyncClient, app: FastAPI) -> None:
         await seed_bunkers(app)
         await insert_measurement(app, "bunker-1", hours_ago(1), avg_level=2.0)
