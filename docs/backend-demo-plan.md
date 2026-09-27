@@ -247,8 +247,8 @@ CREATE TABLE bunkers (
 
 CREATE TABLE geometries (
   bunker_id  TEXT PRIMARY KEY REFERENCES bunkers(id),
-  shape      JSONB NOT NULL,            -- truncated_cone, диаметры, высота
-  sensor     JSONB NOT NULL,            -- x, y, z, tilt_deg
+  shape      JSONB NOT NULL,            -- tiered_rect: X/Y на 3 уровнях + высота сосуда
+  sensor     JSONB NOT NULL,            -- x, y, z, tilt_x_deg, tilt_y_deg
   beams      JSONB NOT NULL,            -- 64 луча: beam_name, axis, position, x, y, z
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

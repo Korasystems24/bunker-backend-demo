@@ -19,8 +19,22 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.usefixtures("clean_query_database")
 
 MINIMAL_GEOMETRY: dict[str, Any] = {
-    "shape": {"type": "truncated_cone", "height_m": 8.0},
-    "sensor": {"x": 0, "y": 0, "z": 8.5, "tilt_deg": 0},
+    "shape": {
+        "type": "tiered_rect",
+        "bottom_x_m": 1.8,
+        "bottom_y_m": 2.4,
+        "bottom_height_m": 0.0,
+        "middle_x_m": 2.4,
+        "middle_y_m": 2.4,
+        "middle_height_m": 1.4,
+        "top_x_m": 3.2,
+        "top_y_m": 3.2,
+        "top_height_m": 2.0,
+        "vessel_height_m": 3.4,
+        "full_volume_m3": 23.85,
+        "rotation_deg": 0.0,
+    },
+    "sensor": {"x": 0, "y": 0, "z": 8.5, "tilt_x_deg": 0, "tilt_y_deg": 0},
     "beams": [{"beam_name": "A1", "axis": "A", "position": 1, "x": 0.35, "y": 0.0, "z": 0}],
 }
 

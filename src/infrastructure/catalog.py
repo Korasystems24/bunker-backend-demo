@@ -39,7 +39,11 @@ class JsonCatalogProvider(CatalogProvider):
             if configured is not None and configured.geometry is not None
             else self._catalog.default_geometry
         )
-        radius_m = template.shape.top_diameter_m / 2
+        # Placeholder radial layout for the demo catalog — a real Configurator
+        # derives beam x/y from sensor placement + tilt, not just the shape.
+        # Kept a bit inside the narrowest top wall so beams land inside the
+        # tiered_rect envelope even after the shape's own OZ rotation.
+        radius_m = min(template.shape.top_x_m, template.shape.top_y_m) / 2 * 0.92
         beams: list[GeometryBeam] = []
         for axis in template.beam_layout.axes:
             azimuth = math.radians(axis.azimuth_deg)

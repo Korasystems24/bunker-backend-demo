@@ -2,16 +2,26 @@
   "version": 1,
   "default_geometry": {
     "shape": {
-      "type": "truncated_cone",
-      "top_diameter_m": 7.0,
-      "bottom_diameter_m": 4.2,
-      "height_m": 8.0
+      "type": "tiered_rect",
+      "bottom_x_m": 1.8,
+      "bottom_y_m": 2.4,
+      "bottom_height_m": 0.0,
+      "middle_x_m": 2.4,
+      "middle_y_m": 2.4,
+      "middle_height_m": 1.4,
+      "top_x_m": 3.2,
+      "top_y_m": 3.2,
+      "top_height_m": 2.0,
+      "vessel_height_m": 3.4,
+      "full_volume_m3": 23.85,
+      "rotation_deg": 0.0
     },
     "sensor": {
-      "x": 0.0,
-      "y": 0.0,
-      "z": 8.5,
-      "tilt_deg": 0.0
+      "x": 1.2,
+      "y": -1.2,
+      "z": 3.2,
+      "tilt_x_deg": -41.6,
+      "tilt_y_deg": 41.3
     },
     "beam_layout": {
       "axes": [

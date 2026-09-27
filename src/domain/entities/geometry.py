@@ -6,21 +6,56 @@ import pydantic
 
 
 class GeometryShape(pydantic.BaseModel):
+    """Производственная модель сосуда ("tiered_rect", из Конфигуратора):
+    прямоугольный в плане бункер, у которого видимая 3D-оболочка — две части
+    снизу вверх: (1) простой прямоугольник постоянной ширины
+    bottom_x_m x bottom_y_m от bottom_height_m до middle_height_m, и (2) одна
+    прямая трапеция выше него до vessel_height_m (верх/крыша сосуда),
+    расширяющаяся до top_x_m x top_y_m. middle_x_m/middle_y_m/top_height_m в
+    саму стенку не участвуют (нужны для расчёта объёма/страппинг-таблицы, не
+    для 3D-оболочки — см. src/features/3d/BunkerShape.tsx во фронтенде).
+    `rotation_deg` — поворот сечения вокруг вертикальной оси (OZ), всегда
+    кратен 90°. `full_volume_m3` — справочная ёмкость сосуда, backend её не
+    использует для расчёта объёма руды (это `measurement.volume`)."""
+
     model_config = pydantic.ConfigDict(frozen=True, extra="forbid")
 
-    type: Literal["truncated_cone"]
-    top_diameter_m: float = pydantic.Field(gt=0)
-    bottom_diameter_m: float = pydantic.Field(gt=0)
-    height_m: float = pydantic.Field(gt=0)
+    type: Literal["tiered_rect"]
+    bottom_x_m: float = pydantic.Field(gt=0)
+    bottom_y_m: float = pydantic.Field(gt=0)
+    bottom_height_m: float = pydantic.Field(ge=0)
+    middle_x_m: float = pydantic.Field(gt=0)
+    middle_y_m: float = pydantic.Field(gt=0)
+    middle_height_m: float = pydantic.Field(ge=0)
+    top_x_m: float = pydantic.Field(gt=0)
+    top_y_m: float = pydantic.Field(gt=0)
+    top_height_m: float = pydantic.Field(ge=0)
+    vessel_height_m: float = pydantic.Field(gt=0)
+    full_volume_m3: float = pydantic.Field(gt=0)
+    rotation_deg: float = 0
+
+    @pydantic.field_validator("rotation_deg")
+    @classmethod
+    def rotation_is_multiple_of_90(cls, value: float) -> float:
+        if value % 90 != 0:
+            raise ValueError("rotation_deg must be a multiple of 90")
+        return value
 
 
 class GeometrySensor(pydantic.BaseModel):
+    """Позиция и наклон уровнемера (вкладка "Levelmeters" Конфигуратора).
+    `tilt_x_deg`/`tilt_y_deg` — наклон луча визирования от истинной
+    вертикали, уже разложенный Конфигуратором по осям X/Y самого бункера
+    (incl_x/incl_y в UI Конфигуратора) — направление наклона полностью
+    известно, в отличие от старого одиночного tilt_deg без азимута."""
+
     model_config = pydantic.ConfigDict(frozen=True, extra="forbid")
 
     x: float
     y: float
     z: float
-    tilt_deg: float
+    tilt_x_deg: float
+    tilt_y_deg: float
 
 
 class GeometryBeam(pydantic.BaseModel):
